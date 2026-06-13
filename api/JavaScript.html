@@ -1,0 +1,611 @@
+<script>
+// =======================================================
+// GLOBAL VARIABLES
+// =======================================================
+
+let apiKey = '';
+let sheetWebApp = '';
+let settingsLoaded = false;
+
+// sheetWebApp
+let allDataUsers = null;
+let previousDataUsers = null;
+
+let allDataRoles = null;
+let previousDataRoles = null;
+
+let allDataUserRoles = null;
+let previousDataUserRoles = null;
+
+let allDataRoleActions = null;
+let previousDataRoleActions = null;
+
+let allDataUserMenu = null;
+let previousDataUserMenu = null;
+
+let allDataRolePermissions = null;
+let previousDataRolePermissions = null;
+
+let allDataDepartments = null;
+let previousDataDepartments = null;
+
+let allDataPositions = null;
+let previousDataPositions = null;
+
+let allDataEmployeeDetails = null;
+let previousDataEmployeeDetails = null;
+
+let allDataUserPolicies = [];
+let previousDataUserPolicies = null;
+
+let allDataLeave = [];
+let previousDataLeave = null;
+
+
+// =======================================================
+// FETCH SETTING DATA
+// =======================================================
+
+const fetchSettingData = () => {
+  if (settingsLoaded) {
+    return Promise.resolve();
+  }
+  if (typeof apiConfig !== 'undefined') {
+    apiKey = apiConfig.idapi || '';
+
+    sheetWebApp = apiConfig.idsheet || '';
+
+    settingsLoaded = true;
+    // console.log('✅ เชื่อมต่อสำเร็จ');
+
+    return Promise.resolve();
+  }
+
+  console.error('❌ เชื่อมต่อไม่สำเร็จ');
+  throw new Error('API Configuration not found');
+};
+
+
+// =======================================================
+// CACHE FUNCTIONS
+// =======================================================
+
+function saveCache(key, data) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({
+      time: Date.now(),
+      data: data
+    }));
+  } catch (error) {
+    console.warn(`ไม่สามารถบันทึก cache: ${key}`, error);
+  }
+}
+
+function loadCache(key, maxAgeMs = 2 * 60 * 1000) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+
+    const cached = JSON.parse(raw);
+    const isExpired = Date.now() - cached.time > maxAgeMs;
+
+    if (isExpired) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+
+    return cached.data;
+  } catch (error) {
+    console.warn(`ไม่สามารถอ่าน cache: ${key}`, error);
+    sessionStorage.removeItem(key);
+    return null;
+  }
+}
+
+// อัปเดต cache เฉพาะ sheet เดียว โดยไม่ลบ cache ของ sheet อื่น
+function updateCachedSheet(cacheKey, sheetName, freshRows) {
+  try {
+    const raw = sessionStorage.getItem(cacheKey);
+    if (!raw) return;
+
+    const cached = JSON.parse(raw);
+    if (!cached.data) cached.data = {};
+    cached.data[sheetName] = freshRows;
+    cached.time = Date.now();
+
+    sessionStorage.setItem(cacheKey, JSON.stringify(cached));
+  } catch (error) {
+    console.warn(`ไม่สามารถอัปเดต cache: ${cacheKey} / ${sheetName}`, error);
+  }
+}
+
+function clearDataCache() {
+  sessionStorage.removeItem('sheet_data');
+}
+
+function clearAllDataCache() {
+  clearDataCache();
+}
+
+
+// =======================================================
+// DATA COMPARE
+// =======================================================
+
+function dataHasChanged(newData, oldData) {
+  if (!oldData) return true;
+  if (!newData) return true;
+  if (newData.length !== oldData.length) return true;
+
+  return JSON.stringify(newData) !== JSON.stringify(oldData);
+}
+
+function cloneData(data) {
+  try {
+    return structuredClone(data);
+  } catch {
+    return JSON.parse(JSON.stringify(data));
+  }
+}
+
+
+// =======================================================
+// FETCH WITH BACKOFF (สำหรับ 429 / 5xx)
+// =======================================================
+
+async function fetchWithBackoff(url, maxRetries = 3) {
+  let delay = 500;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url);
+
+      if (res.ok) return res;
+
+      if (res.status !== 429 && res.status < 500) {
+        return res;
+      }
+
+      if (attempt === maxRetries) return res;
+
+      await new Promise(r => setTimeout(r, delay + Math.random() * 200));
+      delay *= 2;
+    } catch (networkErr) {
+      if (attempt === maxRetries) throw networkErr;
+      await new Promise(r => setTimeout(r, delay + Math.random() * 200));
+      delay *= 2;
+    }
+  }
+}
+
+
+// =======================================================
+// FETCH SINGLE SHEET
+// ใช้สำหรับ refresh เฉพาะตารางหลังเพิ่ม/แก้ไข/ลบ
+// =======================================================
+
+async function fetchDataFromAPI(sheetId, sheetName, apiKey) {
+  if (!settingsLoaded) {
+    await fetchSettingData();
+  }
+
+  if (!sheetId || !sheetName || !apiKey) {
+    console.warn(`ข้อมูลเชื่อมต่อไม่ครบ: ${sheetName}`);
+    return [];
+  }
+
+  const apiUrl = "https://sheets.googleapis.com/v4/spreadsheets/"
+    + sheetId
+    + "/values/"
+    + encodeURIComponent(sheetName)
+    + "?alt=json&key="
+    + apiKey;
+
+  try {
+    const response = await fetchWithBackoff(apiUrl);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.values) {
+      console.warn(`ไม่พบข้อมูลในแผ่นงาน: ${sheetName}`);
+      return [];
+    }
+
+    return data.values.slice(1);
+  } catch (error) {
+    console.error(`❌ ดึงข้อมูล ${sheetName} ไม่สำเร็จ`, error);
+    return [];
+  }
+}
+
+
+// =======================================================
+// FETCH BATCH SHEETS
+// ลด request จากหลายครั้งเหลือครั้งเดียวต่อ Spreadsheet
+// =======================================================
+
+async function fetchBatchDataFromAPI(sheetId, sheetNames, apiKey) {
+  if (!settingsLoaded) {
+    await fetchSettingData();
+  }
+
+  if (!sheetId || !apiKey || !Array.isArray(sheetNames) || sheetNames.length === 0) {
+    console.warn('ข้อมูล batch ไม่ครบ');
+    return {};
+  }
+
+  const ranges = sheetNames
+    .map(sheetName => "ranges=" + encodeURIComponent(sheetName))
+    .join("&");
+
+  const apiUrl = "https://sheets.googleapis.com/v4/spreadsheets/"
+    + sheetId
+    + "/values:batchGet?"
+    + ranges
+    + "&majorDimension=ROWS&key="
+    + apiKey;
+
+  try {
+    const response = await fetchWithBackoff(apiUrl);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Batch API Error:", errorText);
+      throw new Error("HTTP error! status: " + response.status);
+    }
+
+    const result = await response.json();
+    const output = {};
+
+    sheetNames.forEach((sheetName, index) => {
+      const rangeData = result.valueRanges?.[index];
+      const values = rangeData?.values || [];
+      output[sheetName] = values.slice(1);
+    });
+
+    return output;
+  } catch (error) {
+    console.error("❌ ดึงข้อมูลแบบ batch ไม่สำเร็จ", error);
+    return {};
+  }
+}
+
+async function fetchBatchDataWithCache(sheetId, sheetNames, apiKey, cacheKey, maxAgeMs = 2 * 60 * 1000) {
+  const cached = loadCache(cacheKey, maxAgeMs);
+
+  if (cached) {
+    // console.log(`✅ ใช้ข้อมูลจาก cache: ${cacheKey}`);
+    return cached;
+  }
+
+  const freshData = await fetchBatchDataFromAPI(sheetId, sheetNames, apiKey);
+  saveCache(cacheKey, freshData);
+
+  return freshData;
+}
+
+
+// =======================================================
+// LOADING DATA
+// =======================================================
+
+const loadingData = async () => {
+  try {
+    await fetchAllData();
+  } catch (err) {
+    console.error('โหลดข้อมูลล้มเหลว:', err);
+    showToast?.('โหลดข้อมูลล้มเหลว', false, 'error');
+  }
+};
+
+
+// =======================================================
+// FETCH ALL DATA
+// 17 sheets → 3 batch requests (A=7, C=2, D=8)
+// =======================================================
+
+const fetchAllData = async (forceRefresh = false) => {
+  await fetchSettingData();
+
+  try {
+    if (forceRefresh) {
+      clearAllDataCache();
+    }
+
+    const [data] = await Promise.all([
+      fetchBatchDataWithCache(sheetWebApp, [
+        'Users',
+        'Roles',
+        'User_Roles',
+        'Role_Actions',
+        'User_Menu',
+        'Role_Permissions',
+        'Departments',
+        'Positions'
+      ], apiKey, 'sheet_data', 2 * 60 * 1000)
+    ]);
+
+    // first load → forceRender = true เพื่อบังคับ render ทุกตาราง
+    await Promise.all([
+      checkDataUsers(data.Users || [], true),
+      checkDataRoles(data.Roles || [], true),
+      checkDataUserRoles(data.User_Roles || [], true),
+      checkDataRoleActions(data.Role_Actions || [], true),
+      checkDataUserMenu(data.User_Menu || [], true),
+      checkDataRolePermissions(data.Role_Permissions || [], true),
+      checkDataDepartments(data.Departments || [], true),
+      checkDataPositions(data.Positions || [], true)
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error('เกิดข้อผิดพลาดในการดึงข้อมูล', error);
+    showToast?.(`❌ เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}`, false, 'error');
+    return false;
+  }
+};
+
+
+// =======================================================
+// CHECK DATA: SHEET A
+// =======================================================
+
+async function checkDataUsers(newDataUsers, forceRender = false) {
+  const changed = dataHasChanged(newDataUsers, previousDataUsers);
+
+  allDataUsers = newDataUsers;
+  if (changed) {
+    previousDataUsers = cloneData(newDataUsers);
+  }
+
+  if (changed || forceRender) {
+    await updateUsersTable();
+  }
+}
+
+async function updateUsersTable() {
+  if (typeof renderEmployees === 'function') {
+    renderEmployees(allDataUsers || []);
+  }
+}
+
+async function checkDataRoles(newDataRoles, forceRender = false) {
+  const changed = dataHasChanged(newDataRoles, previousDataRoles);
+
+  allDataRoles = newDataRoles;
+  if (changed) {
+    previousDataRoles = cloneData(newDataRoles);
+  }
+
+  if (changed || forceRender) {
+    await updateRolesTable();
+  }
+}
+
+async function updateRolesTable() {
+  if (typeof renderRoles === 'function') {
+    renderRoles(allDataRoles || []);
+  }
+}
+
+async function checkDataUserRoles(newDataUserRoles, forceRender = false) {
+  const changed = dataHasChanged(newDataUserRoles, previousDataUserRoles);
+
+  allDataUserRoles = newDataUserRoles;
+  if (changed) {
+    previousDataUserRoles = cloneData(newDataUserRoles);
+  }
+  // ไม่มี table render — ใช้ allDataUserRoles ใน logic อื่น
+}
+
+async function checkDataRoleActions(newDataRoleActions, forceRender = false) {
+  const changed = dataHasChanged(newDataRoleActions, previousDataRoleActions);
+
+  allDataRoleActions = newDataRoleActions;
+
+  if (changed) {
+    previousDataRoleActions = cloneData(newDataRoleActions);
+  }
+
+  // Role Actions โหลดเสร็จแล้ว ให้ render Roles ใหม่
+  if (changed || forceRender) {
+    await updateRolesTable();
+  }
+}
+
+async function checkDataUserMenu(newDataUserMenu, forceRender = false) {
+  const changed = dataHasChanged(newDataUserMenu, previousDataUserMenu);
+
+  allDataUserMenu = newDataUserMenu;
+  if (changed) {
+    previousDataUserMenu = cloneData(newDataUserMenu);
+  }
+}
+
+async function checkDataRolePermissions(newDataRolePermissions, forceRender = false) {
+  const changed = dataHasChanged(newDataRolePermissions, previousDataRolePermissions);
+
+  allDataRolePermissions = newDataRolePermissions;
+  if (changed) {
+    previousDataRolePermissions = cloneData(newDataRolePermissions);
+  }
+}
+
+async function checkDataDepartments(newDataDepartments, forceRender = false) {
+  const changed = dataHasChanged(newDataDepartments, previousDataDepartments);
+
+  allDataDepartments = newDataDepartments;
+  if (changed) {
+    previousDataDepartments = cloneData(newDataDepartments);
+  }
+
+  if (changed || forceRender) {
+    await updateDepartmentsTable();
+  }
+}
+
+async function updateDepartmentsTable() {
+  if (typeof renderDepartments === 'function') {
+    renderDepartments(allDataDepartments || []);
+  }
+}
+
+async function checkDataPositions(newDataPositions, forceRender = false) {
+  const changed = dataHasChanged(newDataPositions, previousDataPositions);
+
+  allDataPositions = newDataPositions;
+  if (changed) {
+    previousDataPositions = cloneData(newDataPositions);
+  }
+
+  if (changed || forceRender) {
+    await updatePositionsTable();
+  }
+}
+
+async function updatePositionsTable() {
+  if (typeof renderPositions === 'function') {
+    renderPositions(allDataPositions || []);
+  }
+}
+
+async function checkDataEmployeeDetails(newDataEmployeeDetails, forceRender = false) {
+  const changed = dataHasChanged(newDataEmployeeDetails, previousDataEmployeeDetails);
+
+  allDataEmployeeDetails = newDataEmployeeDetails;
+  if (changed) {
+    previousDataEmployeeDetails = cloneData(newDataEmployeeDetails);
+  }
+
+  if ((changed || forceRender) && typeof renderEmployees === 'function') {
+    renderEmployees(allDataUsers || []);
+  }
+}
+
+async function checkDataUserPolicies(newDataUserPolicies, forceRender = false) {
+  const changed = dataHasChanged(newDataUserPolicies, previousDataUserPolicies);
+
+  allDataUserPolicies = newDataUserPolicies || [];
+  if (changed) {
+    previousDataUserPolicies = cloneData(newDataUserPolicies || []);
+  }
+
+  if ((changed || forceRender) && typeof renderLeavePolicyList === 'function') {
+    renderLeavePolicyList();
+  }
+}
+
+async function checkDataLeave(newDataLeave, forceRender = false) {
+  const changed = dataHasChanged(newDataLeave, previousDataLeave);
+
+  allDataLeave = newDataLeave || [];
+  if (changed) {
+    previousDataLeave = cloneData(newDataLeave || []);
+  }
+
+  if ((changed || forceRender) && typeof renderLeavePolicyList === 'function') {
+    renderLeavePolicyList();
+  }
+}
+
+// =======================================================
+// UPDATE SPECIFIC DATA: SHEET A
+// =======================================================
+
+const updateSpecificDataUsers = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataUsers = await fetchDataFromAPI(sheetWebApp, 'Users', apiKey);
+  updateCachedSheet('sheet_data', 'Users', newDataUsers);
+  await checkDataUsers(newDataUsers);
+};
+
+const updateSpecificDataRoles = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataRoles = await fetchDataFromAPI(sheetWebApp, 'Roles', apiKey);
+  updateCachedSheet('sheet_data', 'Roles', newDataRoles);
+  await checkDataRoles(newDataRoles);
+};
+
+const updateSpecificDataUserRoles = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataUserRoles = await fetchDataFromAPI(sheetWebApp, 'User_Roles', apiKey);
+  updateCachedSheet('sheet_data', 'User_Roles', newDataUserRoles);
+  await checkDataUserRoles(newDataUserRoles);
+};
+
+const updateSpecificDataRoleActions = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataRoleActions = await fetchDataFromAPI(sheetWebApp, 'Role_Actions', apiKey);
+  updateCachedSheet('sheet_data', 'Role_Actions', newDataRoleActions);
+  await checkDataRoleActions(newDataRoleActions);
+};
+
+const updateSpecificDataUserMenu = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataUserMenu = await fetchDataFromAPI(sheetWebApp, 'User_Menu', apiKey);
+  updateCachedSheet('sheet_data', 'User_Menu', newDataUserMenu);
+  await checkDataUserMenu(newDataUserMenu);
+};
+
+const updateSpecificDataRolePermissions = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataRolePermissions = await fetchDataFromAPI(sheetWebApp, 'Role_Permissions', apiKey);
+  updateCachedSheet('sheet_data', 'Role_Permissions', newDataRolePermissions);
+  await checkDataRolePermissions(newDataRolePermissions);
+};
+
+const updateSpecificDataDepartments = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataDepartments = await fetchDataFromAPI(sheetWebApp, 'Departments', apiKey);
+  updateCachedSheet('sheet_data', 'Departments', newDataDepartments);
+  await checkDataDepartments(newDataDepartments);
+};
+
+const updateSpecificDataPositions = async () => {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+  const newDataPositions = await fetchDataFromAPI(sheetWebApp, 'Positions', apiKey);
+  updateCachedSheet('sheet_data', 'Positions', newDataPositions);
+  await checkDataPositions(newDataPositions);
+};
+
+const refreshAllDataA = refreshAllData;
+
+// =======================================================
+// REFRESH ALL DATA BY GROUP
+// ใช้ batchGet ลดจำนวน request
+// =======================================================
+
+async function refreshAllData(forceRefresh = true) {
+  if (!sheetWebApp || !apiKey) await fetchSettingData();
+
+  if (forceRefresh) {
+    clearDataCache();
+  }
+
+  const data = await fetchBatchDataWithCache(sheetWebApp, [
+    'Users',
+    'Roles',
+    'User_Roles',
+    'Role_Actions',
+    'User_Menu',
+    'Role_Permissions',
+    'Departments',
+    'Positions'
+  ], apiKey, 'sheetA_data', 2 * 60 * 1000);
+
+  await Promise.all([
+    checkDataUsers(data.Users || [], true),
+    checkDataRoles(data.Roles || [], true),
+    checkDataUserRoles(data.User_Roles || [], true),
+    checkDataRoleActions(data.Role_Actions || [], true),
+    checkDataUserMenu(data.User_Menu || [], true),
+    checkDataRolePermissions(data.Role_Permissions || [], true),
+    checkDataDepartments(data.Departments || [], true),
+    checkDataPositions(data.Positions || [], true)
+  ]);
+}
+</script>

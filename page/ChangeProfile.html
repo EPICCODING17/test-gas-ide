@@ -1,0 +1,522 @@
+<div id="globalSheetOverlay" class="bottom-sheet-overlay" onclick="closeSheet()"></div>
+<div id="profileSheet" class="bottom-sheet">
+  <div class="drag-handle"></div> 
+  <div class="px-5 pb-2 pt-1 flex items-center justify-between flex-shrink-0">
+    <h2 class="text-lg font-bold">แก้ไขข้อมูลส่วนตัว</h2>
+    <button onclick="closeSheet()" class="w-8 h-8 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center justify-center">
+      <i class='bx bx-x text-xl'></i>
+    </button>
+  </div>
+  <form id="profileForm" class="flex-1 overflow-y-auto px-5 pb-5">
+    <div class="space-y-4">
+      
+      <div class="flex flex-col items-center justify-center pt-2 pb-4">
+        <div class="relative group cursor-pointer" onclick="openAvatarSelectionModal()">
+          <input type="file" id="sysProfileImgUpload" accept="image/*" class="hidden" onchange="previewSysImage(event, 'sysProfileAvatar')">
+          <img id="sysProfileAvatar" src="https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-1.png" alt="Profile" class="w-24 h-24 object-cover rounded-full shadow-md border-[3px] border-white dark:border-gray-700 transition-transform group-hover:scale-105">
+          <button type="button" class="absolute bottom-0 right-0 bg-brand-blue text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-blue-600 transition border-2 border-white dark:border-gray-800">
+            <i class='bx bx-camera text-sm'></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">รหัสผู้ใช้ (User ID)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-fingerprint text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fUserId" class="custom-input w-full pl-11 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ชื่อผู้ใช้ (Username)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-user-circle text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fUsername" class="custom-input w-full pl-11 pr-4 py-2.5">
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">รหัสผ่าน (Password)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-lock-alt text-gray-400 text-lg'></i>
+            </div>
+            <input type="password" id="fPassword" class="custom-input w-full pl-11 pr-11 py-2.5">
+            <button type="button" onclick="const p = document.getElementById('fPassword'); p.type = p.type === 'password' ? 'text' : 'password'; const i = this.querySelector('i'); i.classList.toggle('bx-hide'); i.classList.toggle('bx-show');" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+              <i class='bx bx-hide text-lg'></i>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">อีเมล (Email)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-envelope text-gray-400 text-lg'></i>
+            </div>
+            <input type="email" id="fEmail" class="custom-input w-full pl-11 pr-4 py-2.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ชื่อ (First Name)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-user text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fFirstName" class="custom-input w-full pl-11 pr-4 py-2.5">
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">นามสกุล (Last Name)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-id-card text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fLastName" class="custom-input w-full pl-11 pr-4 py-2.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ฝ่าย/แผนก (Department)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-buildings text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fDepartment" class="custom-input w-full pl-11 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ตำแหน่ง (Positions)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-buildings text-gray-400 text-lg'></i>
+            </div>
+            <input type="text" id="fPositions" class="custom-input w-full pl-11 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">สถานะบัญชี (Status)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <i class='bx bx-check-circle text-gray-400 text-lg'></i>
+            </div>
+            <select id="fStatus" class="custom-input w-full pl-11 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" disabled>
+              <option value="active" selected>Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex justify-between items-center mb-1">
+          <label class="block font-medium text-gray-700 dark:text-gray-300">ลายเซ็น</label>
+          <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+            <button type="button" onclick="setSysSigMode('draw')" id="btnSysSigDraw" class="px-3 py-1 text-xs rounded-md bg-white dark:bg-gray-600 shadow-sm text-brand-blue font-medium transition-all">เซ็นสด</button>
+            <button type="button" onclick="setSysSigMode('upload')" id="btnSysSigUpload" class="px-3 py-1 text-xs rounded-md text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all">อัปโหลด</button>
+          </div>
+        </div>
+
+        <div id="sysSigDrawMode" class="space-y-2">
+          <canvas id="sysSignatureCanvas" class="w-full h-32 bg-white dark:bg-gray-100 rounded-xl border border-gray-200 dark:border-gray-600 cursor-crosshair touch-none"></canvas>
+          <div class="flex justify-between items-center px-1">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="flex gap-1.5 items-center">
+                <button type="button" onclick="setSysPenColor('#000000', this)" class="sys-color-btn w-5 h-5 rounded-full bg-black ring-2 ring-offset-1 ring-black dark:ring-offset-gray-800 transition-all"></button>
+                <button type="button" onclick="setSysPenColor('#3b82f6', this)" class="sys-color-btn w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-500 dark:ring-offset-gray-800 transition-all"></button>
+                <button type="button" onclick="setSysPenColor('#ef4444', this)" class="sys-color-btn w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-500 dark:ring-offset-gray-800 transition-all"></button>
+              </div>
+              <div class="flex items-center gap-1 border-l border-gray-300 dark:border-gray-600 pl-2 sm:pl-3">
+                <i class='bx bx-pencil text-gray-400'></i>
+                <input type="range" id="sysPenSize" min="1" max="8" value="2" class="w-14 sm:w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-brand-blue" oninput="setSysPenSize(this.value)">
+              </div>
+            </div>
+            <button type="button" onclick="clearSysSignature()" class="text-brand-red text-sm hover:text-red-700 font-medium flex items-center gap-1 transition-colors">
+              <i class='bx bx-trash'></i> ล้าง
+            </button>
+          </div>
+        </div>
+
+        <div id="sysSigUploadMode" class="hidden relative group cursor-pointer w-full h-32 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 flex flex-col items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" onclick="document.getElementById('sysSigUpload').click()">
+          <img id="sysSigPreview" src="" class="absolute inset-0 w-full h-full object-contain hidden p-2">
+          <div id="sysSigUploadPlaceholder" class="flex flex-col items-center">
+            <i class='bx bx-cloud-upload text-3xl text-brand-blue/70'></i>
+            <span class="text-gray-500 dark:text-gray-400 mt-1 text-sm">คลิกเพื่ออัปโหลดลายเซ็น</span>
+          </div>
+          <input type="file" id="sysSigUpload" accept="image/*" class="hidden" onchange="handleSysSigUpload(event)">
+        </div>
+      </div>
+    </div>
+  </form>
+  
+  <div class="px-5 py-4 border-t-2 border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
+    <button onclick="saveProfile()" class="w-full py-3 bg-[var(--bs-blue)] text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/30 hover:shadow-xl hover:bg-blue-600 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+      <i class='bx bx-check-circle text-lg'></i> บันทึกข้อมูล
+    </button>
+  </div>
+</div>
+
+<div id="sysAvatarModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0 p-4">
+  <div id="sysAvatarModalContent" class="glass-panel w-full max-w-lg max-h-[80vh] flex flex-col transform scale-95 transition-transform duration-300">
+    <div class="p-4 sm:p-5 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-between items-center">
+      <h3 class="font-bold text-lg text-gray-800 dark:text-white">เลือกรูปโปรไฟล์</h3>
+      <button onclick="closeAvatarSelectionModal()" class="w-8 h-8 rounded-lg hover:bg-gray-200/50 dark:hover:bg-white/10 text-gray-500 hover:text-brand-red flex items-center justify-center transition-colors">
+        <i class='bx bx-x text-2xl'></i>
+      </button>
+    </div>
+    <div class="p-4 sm:p-5 flex-1 overflow-y-auto">
+      <div id="sysAvatarGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 sm:gap-3 p-1"></div>
+    </div>
+    <div class="p-4 sm:p-5 border-t border-gray-200/50 dark:border-gray-700/50 rounded-b-2xl">
+      <button class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-brand-blue/80 text-brand-blue hover:bg-brand-blue hover:text-white transition-all text-sm font-semibold shadow-sm hover:shadow-md" onclick="document.getElementById('sysProfileImgUpload').click(); closeAvatarSelectionModal();">
+        <i class='bx bx-upload text-lg'></i> อัปโหลดจากเครื่อง
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const changeUserStatus = async (newStatus) => {
+  const userJson = localStorage.getItem('currentUser');
+  if (!userJson) return;
+
+  const user = JSON.parse(userJson);
+  const uid = user.uiduser;
+  
+  if (!uid) return;
+
+  await notifyOperation(
+    `กำลังเปลี่ยนสถานะเป็น ${newStatus}...`, 
+    `เปลี่ยนสถานะเป็น ${newStatus} สำเร็จ`, 
+    async () => {
+      await new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(res => res === "success" ? resolve() : reject("Server Error"))
+          .withFailureHandler(err => reject(err))
+          .updateActionInSheet(uid, newStatus);
+      });
+
+      user.action = newStatus;
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      
+      updateLoginUI(true, user);
+      updateClockUserUI();
+    },
+    'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ'
+  );
+};
+
+const previewSysImage = (event, previewId) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById(previewId);
+      if (preview) {
+          preview.src = e.target.result;
+      }
+    }
+    reader.readAsDataURL(file);
+  }
+};
+
+const openAvatarSelectionModal = () => {
+  const modal = document.getElementById('sysAvatarModal');
+  const content = document.getElementById('sysAvatarModalContent');
+  
+  if(document.getElementById('sysAvatarGrid').children.length === 0) {
+      loadSysAvatars();
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  void modal.offsetWidth;
+  modal.classList.remove('opacity-0');
+  content.classList.remove('scale-95');
+};
+
+const closeAvatarSelectionModal = () => {
+  const modal = document.getElementById('sysAvatarModal');
+  const content = document.getElementById('sysAvatarModalContent');
+  modal.classList.add('opacity-0');
+  content.classList.add('scale-95');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }, 300);
+};
+
+const selectSysAvatar = (src) => {
+  const header = document.getElementById('sysProfileAvatar');
+  if (header) header.src = src;
+  closeAvatarSelectionModal();
+};
+
+const loadSysAvatars = () => {
+  const grid = document.getElementById('sysAvatarGrid');
+  if (!grid) return;
+
+  for(let i = 1; i <= 50; i++) {
+    const url = 'https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-' + i + '.png';
+    const img = document.createElement('img');
+    img.src = url;
+    img.loading = "lazy";
+    img.className = "w-full aspect-square rounded-full object-cover cursor-pointer hover:scale-110 hover:ring-2 ring-brand-blue transition-all bg-gray-50 dark:bg-gray-700 p-1 shadow-sm";
+    img.onclick = () => selectSysAvatar(url);
+    grid.appendChild(img);
+  }
+};
+
+const sysCanvas = document.getElementById('sysSignatureCanvas');
+const sysCtx = sysCanvas ? sysCanvas.getContext('2d') : null;
+let isSysDrawing = false;
+let sysCurrentColor = '#000000';
+let sysCurrentSize = 2;
+
+const resizeSysCanvas = () => {
+  if (!sysCanvas) return;
+  const rect = sysCanvas.getBoundingClientRect();
+  sysCanvas.width = rect.width;
+  sysCanvas.height = Math.max(rect.height || 128, 128);
+
+  if (sysCtx) {
+    sysCtx.strokeStyle = sysCurrentColor;
+    sysCtx.lineWidth = sysCurrentSize;
+    sysCtx.lineCap = 'round';
+    sysCtx.lineJoin = 'round';
+  }
+};
+
+const getSysCoordinates = (e) => {
+  const rect = sysCanvas.getBoundingClientRect();
+  const scaleX = sysCanvas.width / rect.width;
+  const scaleY = sysCanvas.height / rect.height;
+
+  if (e.touches && e.touches.length > 0) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY
+    };
+  }
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+};
+
+const startSysDrawing = (e) => {
+  if(e.type === 'touchstart') e.preventDefault();
+  isSysDrawing = true;
+  sysCanvas.dataset.updated = "true";
+  const { x, y } = getSysCoordinates(e);
+  sysCtx.beginPath();
+  sysCtx.moveTo(x, y);
+};
+
+const stopSysDrawing = () => {
+  isSysDrawing = false;
+  if(sysCtx) sysCtx.beginPath();
+};
+
+const drawSys = (e) => {
+  if (!isSysDrawing) return;
+  e.preventDefault();
+  const { x, y } = getSysCoordinates(e);
+  sysCtx.lineTo(x, y);
+  sysCtx.stroke();
+  sysCtx.beginPath();
+  sysCtx.moveTo(x, y);
+};
+
+if (sysCanvas) {
+  sysCanvas.addEventListener('mousedown', startSysDrawing);
+  sysCanvas.addEventListener('mousemove', drawSys);
+  sysCanvas.addEventListener('mouseup', stopSysDrawing);
+  sysCanvas.addEventListener('mouseout', stopSysDrawing);
+  sysCanvas.addEventListener('touchstart', startSysDrawing, { passive: false });
+  sysCanvas.addEventListener('touchmove', drawSys, { passive: false });
+  sysCanvas.addEventListener('touchend', stopSysDrawing);
+  sysCanvas.addEventListener('touchcancel', stopSysDrawing);
+}
+
+const clearSysSignature = () => {
+  if (sysCtx && sysCanvas) {
+    sysCtx.clearRect(0, 0, sysCanvas.width, sysCanvas.height);
+  }
+  
+  const preview = document.getElementById('sysSigPreview');
+  const placeholder = document.getElementById('sysSigUploadPlaceholder');
+  const upload = document.getElementById('sysSigUpload');
+  
+  if (preview && placeholder) {
+    preview.src = "";
+    preview.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+  }
+  if (upload) {
+    upload.value = "";
+  }
+};
+
+const setSysPenColor = (color, btnElement) => {
+  sysCurrentColor = color;
+  if(sysCtx) sysCtx.strokeStyle = color;
+  
+  document.querySelectorAll('.sys-color-btn').forEach(btn => {
+    btn.classList.remove('ring-2');
+  });
+  if(btnElement) btnElement.classList.add('ring-2');
+};
+
+const setSysPenSize = (size) => {
+  sysCurrentSize = size;
+  if(sysCtx) sysCtx.lineWidth = size;
+};
+
+const setSysSigMode = (mode) => {
+  const drawMode = document.getElementById('sysSigDrawMode');
+  const uploadMode = document.getElementById('sysSigUploadMode');
+  const btnDraw = document.getElementById('btnSysSigDraw');
+  const btnUpload = document.getElementById('btnSysSigUpload');
+
+  const activeClass = "bg-white dark:bg-gray-600 shadow-sm text-brand-blue font-medium".split(" ");
+  const inactiveClass = "text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white".split(" ");
+
+  if (mode === 'draw') {
+    drawMode.classList.remove('hidden');
+    uploadMode.classList.add('hidden');
+    
+    btnDraw.classList.remove(...inactiveClass);
+    btnDraw.classList.add(...activeClass);
+    
+    btnUpload.classList.remove(...activeClass);
+    btnUpload.classList.add(...inactiveClass);
+    
+    setTimeout(resizeSysCanvas, 50);
+  } else {
+    drawMode.classList.add('hidden');
+    uploadMode.classList.remove('hidden');
+    
+    btnUpload.classList.remove(...inactiveClass);
+    btnUpload.classList.add(...activeClass);
+    
+    btnDraw.classList.remove(...activeClass);
+    btnDraw.classList.add(...inactiveClass);
+  }
+};
+
+const handleSysSigUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('sysSigPreview');
+      const placeholder = document.getElementById('sysSigUploadPlaceholder');
+      preview.src = e.target.result;
+      preview.dataset.updated = "true";
+      preview.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    }
+    reader.readAsDataURL(file);
+  }
+};
+
+const saveProfile = (event) => {
+  if (event) event.preventDefault();
+  
+  const uid = document.getElementById('fUserId').value;
+  if (!uid) return showToast("ไม่พบรหัสผู้ใช้", "error");
+
+  const username = document.getElementById('fUsername').value.trim();
+  const password = document.getElementById('fPassword').value.trim();
+  const email = document.getElementById('fEmail').value.trim();
+  const firstname = document.getElementById('fFirstName').value.trim();
+  const lastname = document.getElementById('fLastName').value.trim();
+
+  if (!username || !firstname || !password) {
+    return showToast("กรุณากรอกข้อมูลสำคัญให้ครบถ้วน", "error");
+  }
+
+  const profileImg = document.getElementById('sysProfileAvatar');
+  const profileImgSrc = profileImg.src;
+  
+  let profileCheck = "url"; 
+  let profileImageDataUrl = profileImgSrc;
+
+  if (profileImgSrc.startsWith('data:image') || profileImg.dataset.updated === "true") {
+    profileCheck = "upload";
+  }
+
+  let signatureCheck = "unchanged";
+  let signatureImageDataUrl = "";
+  const drawMode = !document.getElementById('sysSigDrawMode').classList.contains('hidden');
+
+  if (drawMode) {
+    const sysCanvas = document.getElementById('sysSignatureCanvas');
+    if (sysCanvas.dataset.updated === "true") {
+      signatureImageDataUrl = sysCanvas.toDataURL("image/png");
+      signatureCheck = "upload";
+    }
+  } else {
+    const sigPreview = document.getElementById('sysSigPreview');
+    if (sigPreview && sigPreview.dataset.updated === "true" && sigPreview.src.startsWith('data:image')) {
+      signatureImageDataUrl = sigPreview.src;
+      signatureCheck = "upload";
+    }
+  }
+
+  const obj = {
+    uid: uid,
+    username: username,
+    password: password,
+    email: email,
+    firstname: firstname,
+    lastname: lastname,
+    profileCheck: profileCheck,
+    profileImageDataUrl: profileImageDataUrl,
+    profileFiletype: "image/png",
+    profileFilename: "profile_update_" + username,
+    signatureCheck: signatureCheck,
+    signatureImageDataUrl: signatureImageDataUrl,
+    signatureFiletype: "image/png",
+    signatureFilename: "signature_update_" + username
+  };
+
+  showLoader();
+
+  google.script.run.withSuccessHandler((res) => {
+    hideLoader();
+    if (res.success) {
+      showToast("บันทึกข้อมูลสำเร็จ", "success");
+      
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const updatedUser = { ...currentUser, ...res.data };
+      
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      updateLoginUI(true, updatedUser);
+      
+      if (typeof closeSheet === 'function') closeSheet();
+      
+    } else {
+      showToast(res.message || "เกิดข้อผิดพลาดในการบันทึก", "error");
+    }
+  }).withFailureHandler((err) => {
+    hideLoader();
+    showToast("ข้อผิดพลาดจากเซิร์ฟเวอร์: " + err.message, "error");
+  }).updateUserProfile(obj);
+};
+</script>

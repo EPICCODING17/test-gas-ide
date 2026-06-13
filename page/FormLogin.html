@@ -1,0 +1,562 @@
+<div class="login-shell w-full text-gray-800 dark:text-gray-100 h-[100dvh] overflow-y-auto relative"> 
+  <div class="min-h-full w-full flex flex-col items-center justify-center py-8 px-4">
+    
+    <div class="glass-panel w-full max-w-lg p-6 sm:p-8 relative overflow-hidden transition-all duration-500 ease-in-out">
+      
+      <div class="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/50 dark:bg-gray-800/50 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm backdrop-blur-md transition-all">
+        <i class='bx bx-moon text-lg text-brand-purple dark:text-gray-300 transition-colors'></i>
+        <button class="dark-toggle-btn w-11 h-6 rounded-full bg-gray-300 dark:bg-brand-blue relative transition-colors cursor-pointer focus:outline-none" title="สลับโหมดหน้าจอ">
+          <div class="w-5 h-5 bg-white rounded-full absolute top-[2px] left-[2px] dark:left-[22px] transition-all duration-300 shadow-md"></div>
+        </button>
+      </div>
+
+      <div class="text-center mb-6 sm:mb-8 mt-4 sm:mt-0">
+        <img id="login-Logo" src="" alt="System Logo" class="w-16 h-16 rounded-full object-cover bg-white mb-4 shadow-lg shadow-brand-blue/30 transform transition hover:scale-105 mx-auto">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-wide"></h2>
+        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2" id="login-NameEng"></p>
+        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2" id="login-NameThai"></p>
+      </div>
+
+      <div class="form-container min-h-[300px]">
+        
+        <form id="loginForm" class="form-view active-form space-y-5" onsubmit="loginUsers(event)">
+          <div>
+            <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ชื่อผู้ใช้งาน</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class='bx bx-user text-gray-400 text-lg'></i>
+              </div>
+              <input type="text" id="loginusername" class="custom-input w-full pl-11 pr-4 py-2.5" placeholder="Username" required>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="block font-medium text-gray-700 dark:text-gray-300">รหัสผ่าน</label>
+              <a href="javascript:void(0);" class="text-brand-blue hover:text-brand-purple transition-colors font-medium" onclick="forgotPassword();">ลืมรหัสผ่าน?</a>
+            </div>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class='bx bx-lock-alt text-gray-400 text-lg'></i>
+              </div>
+              <input type="password" id="loginPassword" class="custom-input w-full pl-11 pr-11 py-2.5" placeholder="••••••••" required>
+              <button type="button" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" onclick="togglePassword('loginPassword', 'loginEyeIcon')">
+                <i class='bx bx-hide text-lg' id="loginEyeIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label class="ios-checkbox" for="remember">
+              <input type="checkbox" id="remember" />
+              <div class="checkbox-wrapper">
+                <div class="checkbox-bg"></div>
+                <svg fill="none" viewBox="0 0 24 24" class="checkbox-icon">
+                  <path stroke-linejoin="round" stroke-linecap="round" stroke-width="3" stroke="currentColor" d="M4 12L10 18L20 6" class="check-path"></path>
+                </svg>
+              </div>
+            </label>
+            <label for="remember" class="text-gray-600 dark:text-gray-400 cursor-pointer select-none">จดจำฉันไว้ในระบบ</label>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 mt-2 rounded-xl bg-gradient-to-r from-brand-blue to-brand-purple text-white font-medium shadow-md shadow-brand-blue/30 hover:shadow-lg hover:shadow-brand-blue/40 transform hover:-translate-y-0.5 transition-all duration-200">
+            เข้าสู่ระบบ
+          </button>
+          
+          <div class="mt-4 text-center pt-2">
+            <span class="text-gray-500 dark:text-gray-400">ยังไม่มีบัญชีใช่ไหม?</span>
+            <button type="button" onclick="switchForm('register')" class="ml-1 text-brand-blue hover:text-brand-purple font-medium transition-colors">สมัครสมาชิกเลย</button>
+          </div>
+        </form>
+
+        <form id="registerForm" class="form-view hidden-form space-y-4">
+          <div class="flex flex-col items-center justify-center mb-2">
+            <div class="relative group cursor-pointer" onclick="document.getElementById('profileUpload').click()" title="อัปโหลดรูปภาพจากเครื่อง">
+              <img id="profilePreview" src="https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-1.png" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-[3px] border-white dark:border-gray-700 shadow-md transition-transform group-hover:scale-105" alt="Profile">
+              <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <i class='bx bx-camera text-white text-xl'></i>
+              </div>
+            </div>
+            <input type="file" id="profileUpload" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+            <button type="button" onclick="openAvatarModal()" class="mt-3 px-3 py-1.5 font-medium text-white bg-brand-blue hover:brightness-90 transition-all rounded-lg whitespace-nowrap  flex items-center gap-1.5">
+              <i class='bx bx-grid-alt'></i> เลือกจากไอคอน
+            </button>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ชื่อผู้ใช้งาน (Username)</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class='bx bx-user-circle text-gray-400 text-lg'></i>
+              </div>
+              <input type="text" name="username" class="custom-input w-full pl-11 pr-4 py-2.5" placeholder="ตั้งชื่อผู้ใช้งาน" required>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <div class="w-1/2">
+              <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">ชื่อจริง</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <i class='bx bx-user text-gray-400 text-lg'></i>
+                </div>
+                <input type="text" id="first_name" class="custom-input w-full pl-11 pr-4 py-2.5" placeholder="ชื่อ" required>
+              </div>
+            </div>
+            <div class="w-1/2">
+              <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">นามสกุล</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <i class='bx bx-id-card text-gray-400 text-lg'></i>
+                </div>
+                <input type="text" id="last_name" class="custom-input w-full pl-11 pr-4 py-2.5" placeholder="นามสกุล" required>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">อีเมล</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class='bx bx-envelope text-gray-400 text-lg'></i>
+              </div>
+              <input type="email" id="email" class="custom-input w-full pl-11 pr-4 py-2.5" placeholder="name@example.com" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium mb-1.5 text-gray-700 dark:text-gray-300">รหัสผ่าน</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <i class='bx bx-lock-alt text-gray-400 text-lg'></i>
+              </div>
+              <input type="password" id="regPassword" class="custom-input w-full pl-11 pr-11 py-2.5" placeholder="สร้างรหัสผ่าน 8 ตัวขึ้นไป" required>
+              <button type="button" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" onclick="togglePassword('regPassword', 'regEyeIcon')">
+                <i class='bx bx-hide text-lg' id="regEyeIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-2 mt-2">
+            <div class="flex justify-between items-center mb-1">
+              <label class="block font-medium text-gray-700 dark:text-gray-300">ลายเซ็น</label>
+              <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                <button type="button" onclick="setSigMode('draw')" id="btnSigDraw" class="px-3 py-1 rounded-md bg-white dark:bg-gray-600 text-brand-blue font-medium transition-all">เซ็นสด</button>
+                <button type="button" onclick="setSigMode('upload')" id="btnSigUpload" class="px-3 py-1 rounded-md text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white transition-all">อัปโหลด</button>
+              </div>
+            </div>
+
+            <div id="sigDrawMode" class="space-y-2">
+              <canvas id="signatureCanvas" class="w-full h-32 bg-white rounded-xl border border-gray-200 dark:border-gray-600 cursor-crosshair touch-none"></canvas>
+              <div class="flex justify-between items-center px-1">
+                <div class="flex items-center gap-3">
+                  <div class="flex gap-1.5 items-center">
+                    <button type="button" onclick="setPenColor('#000000', this)" class="color-btn w-5 h-5 rounded-full bg-black ring-2 ring-offset-1 ring-black dark:ring-offset-gray-800 transition-all"></button>
+                    <button type="button" onclick="setPenColor('#3b82f6', this)" class="color-btn w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-500 dark:ring-offset-gray-800 transition-all"></button>
+                    <button type="button" onclick="setPenColor('#ef4444', this)" class="color-btn w-5 h-5 rounded-full bg-red-500 hover:ring-2 ring-offset-1 ring-red-500 dark:ring-offset-gray-800 transition-all"></button>
+                  </div>
+                  <div class="flex items-center gap-1 border-l border-gray-300 dark:border-gray-600 pl-3">
+                    <i class='bx bx-pencil text-gray-400'></i>
+                    <input type="range" id="penSize" min="1" max="8" value="2" class="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-brand-blue" oninput="setPenSize(this.value)">
+                  </div>
+                </div>
+                <button type="button" onclick="clearSignature()" class="text-brand-red hover:text-red-700 font-medium flex items-center gap-1 transition-colors">
+                  <i class='bx bx-trash'></i> ล้าง
+                </button>
+              </div>
+            </div>
+
+            <div id="sigUploadMode" class="hidden relative group cursor-pointer w-full h-32 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 flex flex-col items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" onclick="document.getElementById('sigUpload').click()">
+              <img id="sigPreview" class="absolute inset-0 w-full h-full object-contain hidden p-2">
+              <div id="sigUploadPlaceholder" class="flex flex-col items-center">
+                <i class='bx bx-cloud-upload text-3xl text-brand-blue/70'></i>
+                <span class="text-gray-500 dark:text-gray-400 mt-1">คลิกเพื่ออัปโหลดลายเซ็น</span>
+              </div>
+              <input type="file" id="sigUpload" accept="image/*" class="hidden" onchange="handleSigUpload(event)">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 mt-4 rounded-xl bg-gradient-to-r from-brand-green to-brand-blue text-white font-medium shadow-md shadow-brand-green/30 hover:shadow-lg hover:shadow-brand-green/40 transform hover:-translate-y-0.5 transition-all duration-200" onclick="registerUser()">
+            สร้างบัญชีใหม่
+          </button>
+          
+          <div class="mt-4 text-center pt-2">
+            <span class="text-gray-500 dark:text-gray-400">มีบัญชีอยู่แล้วใช่ไหม?</span>
+            <button type="button" onclick="switchForm('login')" class="ml-1 text-brand-green hover:text-brand-blue font-medium transition-colors">เข้าสู่ระบบ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<div id="avatarModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0 p-4">
+  <div class="glass-panel w-full max-w-md p-4 sm:p-6 max-h-[85vh] flex flex-col transform scale-95 transition-transform duration-300" id="avatarModalContent">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-gray-800 dark:text-white">เลือกรูปโปรไฟล์</h3>
+      <button type="button" onclick="closeAvatarModal()" class="text-gray-500 hover:text-brand-red transition-colors">
+        <i class='bx bx-x text-2xl'></i>
+      </button>
+    </div>
+    <div class="overflow-y-auto grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-3 p-1" id="avatarGrid"></div>
+  </div>
+</div>
+
+<script>
+const switchForm = (type) => {
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+
+  if (type === 'register') {
+    loginForm.classList.remove('active-form');
+    loginForm.classList.add('hidden-form');
+    
+    setTimeout(() => {
+      registerForm.classList.remove('hidden-form');
+      registerForm.classList.add('active-form');
+      setTimeout(resizeCanvas, 50);
+    }, 150);
+    
+  } else {
+    registerForm.classList.remove('active-form');
+    registerForm.classList.add('hidden-form');
+    
+    setTimeout(() => {
+      loginForm.classList.remove('hidden-form');
+      loginForm.classList.add('active-form');
+    }, 150);
+  }
+}
+
+const togglePassword = (inputId, iconId) => {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  
+  if (input.type === "password") {
+    input.type = "text";
+    icon.classList.replace('bx-hide', 'bx-show');
+    icon.classList.add('text-brand-blue');
+  } else {
+    input.type = "password";
+    icon.classList.replace('bx-show', 'bx-hide');
+    icon.classList.remove('text-brand-blue');
+  }
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('profilePreview').src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+const openAvatarModal = () => {
+  const modal = document.getElementById('avatarModal');
+  const content = document.getElementById('avatarModalContent');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  void modal.offsetWidth;
+  modal.classList.remove('opacity-0');
+  content.classList.remove('scale-95');
+}
+
+const closeAvatarModal = () => {
+  const modal = document.getElementById('avatarModal');
+  const content = document.getElementById('avatarModalContent');
+  modal.classList.add('opacity-0');
+  content.classList.add('scale-95');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }, 300);
+}
+
+const selectAvatar = (src) => {
+  document.getElementById('profilePreview').src = src;
+  closeAvatarModal();
+}
+
+const loadAvatars = () => {
+  const grid = document.getElementById('avatarGrid');
+  if (!grid) return;
+
+  for(let i = 1; i <= 50; i++) {
+    const url = 'https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-' + i + '.png';
+    
+    const img = document.createElement('img');
+    img.src = url;
+    img.loading = "lazy";
+    img.className = "w-full aspect-square rounded-full object-cover cursor-pointer hover:scale-110 hover:ring-2 ring-brand-blue transition-all bg-white dark:bg-gray-800 p-1 shadow-sm";
+    img.onclick = () => selectAvatar(url);
+    grid.appendChild(img);
+  }
+}
+
+const canvas = document.getElementById('signatureCanvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+let isDrawing = false;
+let currentPenColor = '#000000';
+let currentPenSize = 2;
+
+const resizeCanvas = () => {
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  ctx.strokeStyle = currentPenColor;
+  ctx.lineWidth = currentPenSize;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+
+const startDrawing = (e) => {
+  isDrawing = true;
+  const { x, y } = getCoordinates(e);
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+
+const stopDrawing = () => {
+  isDrawing = false;
+  ctx.beginPath();
+}
+
+const getCoordinates = (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  if (e.touches && e.touches.length > 0) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY
+    };
+  }
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+const draw = (e) => {
+  if (!isDrawing) return;
+  e.preventDefault();
+
+  const { x, y } = getCoordinates(e);
+
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+
+if (canvas) {
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDrawing);
+  canvas.addEventListener('mouseout', stopDrawing);
+
+  canvas.addEventListener('touchstart', startDrawing, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', stopDrawing);
+  canvas.addEventListener('touchcancel', stopDrawing);
+}
+
+const clearSignature = () => {
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const sigPreview = document.getElementById('sigPreview');
+  const sigUploadPlaceholder = document.getElementById('sigUploadPlaceholder');
+  const sigUploadInput = document.getElementById('sigUpload');
+  
+  if (sigPreview && sigUploadPlaceholder) {
+    sigPreview.src = "";
+    sigPreview.classList.add('hidden');
+    sigUploadPlaceholder.classList.remove('hidden');
+  }
+  
+  if (sigUploadInput) {
+    sigUploadInput.value = "";
+  }
+  
+  const profilePreview = document.getElementById('profilePreview');
+  if (profilePreview) {
+    profilePreview.src = "https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-1.png";
+  }
+};
+
+const setPenColor = (color, btnElement) => {
+  currentPenColor = color;
+  ctx.strokeStyle = color;
+  
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.classList.remove('ring-2');
+  });
+  if(btnElement) btnElement.classList.add('ring-2');
+}
+
+const setPenSize = (size) => {
+  currentPenSize = size;
+  ctx.lineWidth = size;
+}
+
+const setSigMode = (mode) => {
+  const drawMode = document.getElementById('sigDrawMode');
+  const uploadMode = document.getElementById('sigUploadMode');
+  const btnDraw = document.getElementById('btnSigDraw');
+  const btnUpload = document.getElementById('btnSigUpload');
+
+  const activeClass = "bg-white dark:bg-gray-600 shadow-sm text-brand-blue font-medium".split(" ");
+  const inactiveClass = "text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white".split(" ");
+
+  if (mode === 'draw') {
+    drawMode.classList.remove('hidden');
+    uploadMode.classList.add('hidden');
+    
+    btnDraw.classList.remove(...inactiveClass);
+    btnDraw.classList.add(...activeClass);
+    
+    btnUpload.classList.remove(...activeClass);
+    btnUpload.classList.add(...inactiveClass);
+    
+    resizeCanvas();
+  } else {
+    drawMode.classList.add('hidden');
+    uploadMode.classList.remove('hidden');
+    
+    btnUpload.classList.remove(...inactiveClass);
+    btnUpload.classList.add(...activeClass);
+    
+    btnDraw.classList.remove(...activeClass);
+    btnDraw.classList.add(...inactiveClass);
+  }
+}
+
+const handleSigUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('sigPreview');
+      const placeholder = document.getElementById('sigUploadPlaceholder');
+      preview.src = e.target.result;
+      preview.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+const registerUser = () => {
+  event.preventDefault();
+
+  const username = document.querySelector('input[name="username"]').value.trim();
+  const firstName = document.getElementById('first_name').value.trim();
+  const lastName = document.getElementById('last_name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('regPassword').value.trim();
+  
+  if (!username || !firstName || !lastName || !email || !password) {
+    showToast("กรุณากรอกข้อมูลให้ครบทุกช่อง", true, "error");
+    return;
+  }
+  
+  const fullname = firstName + " " + lastName;
+
+  const profileImgSrc = document.getElementById('profilePreview').src;
+  let profileCheck = ""; 
+  let profileImageDataUrl = profileImgSrc;
+
+  if (profileImgSrc.startsWith('data:image')) {
+    profileCheck = "upload";
+  }
+
+  let signatureImageDataUrl = "";
+  let signatureCheck = "";
+  const drawMode = !document.getElementById('sigDrawMode').classList.contains('hidden');
+  
+  if (drawMode) {
+    const canvas = document.getElementById('signatureCanvas');
+    signatureImageDataUrl = canvas.toDataURL("image/png");
+    signatureCheck = "upload"; 
+  } else {
+    const sigPreview = document.getElementById('sigPreview').src;
+    if (sigPreview && sigPreview.startsWith('data:image')) {
+      signatureImageDataUrl = sigPreview;
+      signatureCheck = "upload";
+    }
+  }
+
+  if (!signatureImageDataUrl || signatureImageDataUrl === document.location.href) {
+     showToast("กรุณาเซ็นชื่อหรืออัปโหลดรูปลายเซ็น", true, "error");
+     return;
+  }
+
+  const obj = {
+    username: username,
+    password: password,
+    fullname: fullname,
+    email: email,
+    profileCheck: profileCheck,
+    profileImageDataUrl: profileImageDataUrl,
+    profileFiletype: "image/png",
+    profileFilename: "profile_" + username,
+    signatureCheck: signatureCheck,
+    signatureImageDataUrl: signatureImageDataUrl,
+    signatureFiletype: "image/png",
+    signatureFilename: "signature_" + username
+  };
+
+  showLoader(); 
+
+  google.script.run.withSuccessHandler((res) => {
+    hideLoader(); 
+    
+    if (res === true) {
+      showToast("สมัครสมาชิกสำเร็จ!", true, "success");
+      document.getElementById('registerForm').reset();
+      clearSignature();
+      switchForm('login');
+    } else {
+      showToast("ชื่อผู้ใช้งานนี้ถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่", true, "error");
+    }
+  }).withFailureHandler((err) => {
+    hideLoader();
+    showToast("เกิดข้อผิดพลาด: " + err.message, true, "error");
+  }).registers(obj);
+};
+
+const forgotPassword = () => {
+  event.preventDefault();
+
+  const username = document.getElementById('loginusername').value.trim();
+  
+  if (!username) {
+    showToast("กรุณากรอก 'ชื่อผู้ใช้งาน' ในช่องเพื่อกู้รหัสผ่าน", true, "error");
+    document.getElementById('loginusername').focus();
+    return;
+  }
+
+  showLoader();
+
+  google.script.run.withSuccessHandler((res) => {
+    hideLoader();
+    if (res.success) {
+      showToast("ระบบได้ส่งรหัสผ่านไปยังอีเมลของคุณแล้ว", true, "success");
+    } else {
+      showToast(res.message, true, "error");
+    }
+  }).withFailureHandler((err) => {
+    hideLoader();
+    showToast("เกิดข้อผิดพลาด: " + err.message, true, "error");
+  }).sendForgotPassword(username);
+};
+</script>

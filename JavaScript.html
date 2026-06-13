@@ -1,0 +1,1422 @@
+<script>
+const qs = (sel) => document.querySelector(sel);
+const qsa = (sel) => document.querySelectorAll(sel);
+
+let currentPage = localStorage.getItem("savedPage") || "dashboard"; 
+let isMobile = window.innerWidth < 1024;
+
+const mainContent = qs("#mainContent");
+const navbar = qs("#navbar");
+const menuToggle = qs("#menuToggle");
+
+const notif_storage_key = 'notifCenterLog';
+const notif_max = 50;
+
+const notifCenter = {
+  items: [],
+  _idCounter: 0,
+
+  _load() {
+    try {
+      const raw = localStorage.getItem(notif_storage_key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.items = parsed.map(n => ({ ...n, time: new Date(n.time) }));
+        this._idCounter = this.items.reduce((max, n) => Math.max(max, n.id || 0), 0);
+        this.items.forEach(n => {
+          if (n.type === 'loading') {
+            n.type = 'error';
+            n.message = n.message.replace('กำลัง', 'หมดเวลา:') || 'หมดเวลาการดำเนินการ';
+          }
+        });
+        this._save();
+      }
+    } catch(e) {}
+  },
+
+  _save() {
+    try {
+      localStorage.setItem(notif_storage_key, JSON.stringify(this.items));
+    } catch(e) {}
+  },
+
+  _trim() {
+    if (this.items.length > notif_max) {
+      this.items = this.items.slice(0, notif_max);
+    }
+  },
+
+  add(message, type = 'loading') {
+    const id = ++this._idCounter;
+    this.items.unshift({ id, message, type, time: new Date() });
+    this._trim();
+    this._save();
+    this.render();
+    this._animateBell();
+    playNotifySound();
+    return id;
+  },
+
+  update(id, message, type = 'success') {
+    const item = this.items.find(n => n.id === id);
+    if (item) {
+      item.message = message;
+      item.type = type;
+      item.time = new Date();
+      this._save();
+      this.render();
+      if (type === 'success' || type === 'error') {
+        this._animateBell();
+        playNotifySound();
+      }
+    }
+  },
+
+  clear() {
+    this.items = [];
+    this._save();
+    this.render();
+  },
+
+  _animateBell() {
+    const icon = qs('#notifBellIcon');
+    if (!icon) return;
+    icon.classList.remove('bell-shake');
+    void icon.offsetWidth;
+    icon.classList.add('bell-shake');
+  },
+
+  _formatTime(d) {
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 5) return 'เมื่อสักครู่';
+    if (diff < 60) return `${diff} วินาทีที่แล้ว`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} นาทีที่แล้ว`;
+    return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  },
+
+_iconHTML(type) {
+    if (type === 'loading') return `<div class="notif-icon loading"><i class='bx bx-loader-alt'></i></div>`;
+    if (type === 'success') return `<div class="notif-icon success"><i class='bx bx-check'></i></div>`;
+    if (type === 'info') return `<div class="notif-icon info" style="color: var(--brand-blue);"><i class='bx bx-info-circle'></i></div>`;
+    return `<div class="notif-icon error"><i class='bx bx-x'></i></div>`;
+  },
+
+  render() {
+    const list = qs('#notifList');
+    const badge = qs('#notifBadge');
+    const empty = qs('#notifEmpty');
+    const clearBtn = qs('#notifClearAllBtn');
+    const spinnerRing = qs('#bellSpinnerRing');
+    const bellBtn = qs('#notifBellBtn');
+    if (!list) return;
+
+    const loadingCount = this.items.filter(n => n.type === 'loading').length;
+    const totalCount = this.items.length;
+
+    if (spinnerRing) {
+      spinnerRing.classList.toggle('active', loadingCount > 0);
+    }
+    if (bellBtn) {
+      bellBtn.classList.toggle('bell-loading', loadingCount > 0);
+    }
+
+    if (badge) {
+      badge.textContent = totalCount;
+      badge.classList.toggle('visible', totalCount > 0 && loadingCount === 0);
+    }
+
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', totalCount === 0);
+    }
+
+    if (totalCount === 0) {
+      list.innerHTML = `<div id="notifEmpty" class="notif-empty"><i class='bx bx-bell-off'></i>ไม่มีการแจ้งเตือน</div>`;
+      return;
+    }
+
+    list.innerHTML = this.items.map(n => `
+      <div class="notif-item" data-notif-id="${n.id}">
+        ${this._iconHTML(n.type)}
+        <div class="flex-1 min-w-0">
+          <div class="notif-msg">${n.message}</div>
+          <div class="notif-time">${this._formatTime(n.time)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+};
+
+const notifyOperation = async (startMsg, doneMsg, asyncFn, errorMsg) => {
+  const id = notifCenter.add(startMsg, 'loading');
+  try {
+    await asyncFn();
+    notifCenter.update(id, doneMsg || 'ดำเนินการเสร็จสิ้น', 'success');
+  } catch(e) {
+    notifCenter.update(id, errorMsg || 'เกิดข้อผิดพลาด', 'error');
+  }
+};
+
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+const demoSave = () => {
+  notifyOperation('กำลังบันทึกข้อมูล...', 'บันทึกข้อมูลสำเร็จ', () => wait(2000));
+};
+const demoDelete = () => {
+  notifyOperation('กำลังลบข้อมูล...', 'ลบข้อมูลสำเร็จ', () => wait(1500));
+};
+const demoUpdate = () => {
+  notifyOperation('กำลังอัพเดทข้อมูล...', 'อัพเดทข้อมูลสำเร็จ', () => wait(2500));
+};
+const demoError = () => {
+  notifyOperation('กำลังดำเนินการ...', null, () => wait(1500).then(() => { throw new Error('fail'); }), 'เกิดข้อผิดพลาดในการดำเนินการ');
+};
+
+setInterval(() => { if (notifCenter.items.length) notifCenter.render(); }, 15000);
+
+const applyTheme = (theme = 'dark') => {
+  const next = ['light', 'dark', 'dark2'].includes(theme) ? theme : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.documentElement.classList.toggle('dark', next !== 'light');
+  localStorage.setItem('atlasTheme', next);
+  localStorage.setItem('darkMode', next !== 'light');
+  syncAppearanceControls();
+};
+
+const applyDensity = (density = 'md') => {
+  const next = ['sm', 'compact', 'md', 'lg'].includes(density) ? density : 'md';
+  document.documentElement.setAttribute('data-density', next);
+  localStorage.setItem('atlasDensity', next);
+  syncAppearanceControls();
+};
+
+const syncAppearanceControls = () => {
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const density = document.documentElement.getAttribute('data-density') || 'md';
+  qsa('[data-theme-set]').forEach(btn => btn.classList.toggle('on', btn.dataset.themeSet === theme));
+  qsa('[data-density-set]').forEach(btn => btn.classList.toggle('on', btn.dataset.densitySet === density));
+};
+
+const positionPop = (pop, anchor) => {
+  if (!pop || !anchor) return;
+  if (window.innerWidth <= 1024 && pop.classList.contains('as-sheet')) {
+    pop.style.top = '';
+    pop.style.left = '';
+    pop.style.right = '';
+    pop.style.bottom = '';
+    return;
+  }
+  const r = anchor.getBoundingClientRect();
+  const width = Math.min(pop.offsetWidth || 360, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(window.innerWidth - width - 12, r.right - width));
+  pop.style.position = 'fixed';
+  pop.style.top = `${r.bottom + 8}px`;
+  pop.style.left = `${left}px`;
+  pop.style.right = 'auto';
+  pop.style.bottom = 'auto';
+};
+
+const initDropdowns = () => {
+  const settingsBtn = qs('#settingsDropdownBtn');
+  const settingsMenu = qs('#settingsDropdownMenu');
+  
+  const profileBtn = qs('#profileDropdownBtn');
+  const profileMenu = qs('#profileDropdownMenu');
+
+  const notifBtn = qs('#notifBellBtn');
+  const notifMenu = qs('#notifDropdownMenu');
+  const notifClearBtn = qs('#notifClearAllBtn');
+
+  const allMenus = [settingsMenu, profileMenu, notifMenu].filter(Boolean);
+
+  const toggleMenu = (menu, ...others) => {
+    if (!menu) return;
+    const willOpen = !menu.classList.contains('show');
+    others.forEach(m => {
+      if (m) {
+        m.classList.remove('show');
+        m.classList.add('hidden-pop');
+      }
+    });
+    menu.classList.toggle('show', willOpen);
+    menu.classList.toggle('hidden-pop', !willOpen);
+    if (willOpen) positionPop(menu, menu === profileMenu ? profileBtn : menu === settingsMenu ? settingsBtn : notifBtn);
+  };
+
+  if (notifBtn && notifMenu) {
+    notifBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu(notifMenu, settingsMenu, profileMenu);
+    });
+  }
+
+  if (notifClearBtn) {
+    notifClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notifCenter.clear();
+    });
+  }
+
+  if(settingsBtn && settingsMenu) {
+      settingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu(settingsMenu, profileMenu, notifMenu);
+      });
+  }
+  
+  if(profileBtn && profileMenu) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu(profileMenu, settingsMenu, notifMenu);
+      });
+  }
+
+  document.addEventListener('click', (e) => {
+      allMenus.forEach(menu => {
+        const btn = menu === settingsMenu ? settingsBtn : menu === profileMenu ? profileBtn : notifBtn;
+        if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+          menu.classList.remove('show');
+          menu.classList.add('hidden-pop');
+        }
+      });
+  });
+};
+
+const initDarkMode = () => {
+  const savedTheme = localStorage.getItem("atlasTheme") || (localStorage.getItem("darkMode") === "false" ? "light" : "dark");
+  const savedDensity = localStorage.getItem("atlasDensity") || "md";
+  applyTheme(savedTheme);
+  applyDensity(savedDensity);
+
+  qsa(".dark-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      applyTheme(current === "light" ? "dark" : "light");
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    const themeBtn = e.target.closest("[data-theme-set]");
+    if (themeBtn) applyTheme(themeBtn.dataset.themeSet);
+
+    const densityBtn = e.target.closest("[data-density-set]");
+    if (densityBtn) applyDensity(densityBtn.dataset.densitySet);
+  });
+};
+
+let notifyEnabled = localStorage.getItem('notifyEnabled') !== 'false';
+let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+
+const playNotifySound = () => {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch(e) {}
+};
+
+const showToast = (msg, force = false, type = 'success') => {
+  if (!notifyEnabled && !force) return;
+  
+  notifCenter.add(msg, type);
+
+  const toast = qs("#toast");
+  if (!toast) return;
+  
+  const icon = toast.querySelector('i');
+  qs("#toastMsg").textContent = msg;
+  
+  if(type === 'success') {
+      icon.className = "bx bx-check-circle text-brand-green text-xl";
+  } else if (type === 'error') {
+      icon.className = "bx bx-x-circle text-brand-red text-xl";
+  } else if (type === 'info') {
+      icon.className = "bx bx-info-circle text-brand-blue text-xl";
+  }
+
+  toast.classList.add("toast-visible");
+  
+  setTimeout(() => toast.classList.remove("toast-visible"), 2000);
+};
+
+const updateToggleUI = () => {
+  const nBtn = qs('#notifyToggleBtn');
+  const nKnob = qs('#notifyToggleKnob');
+  const sBtn = qs('#soundToggleBtn');
+  const sKnob = qs('#soundToggleKnob');
+  const sIcon = qs('#soundIcon');
+  
+  if (nBtn) {
+    nBtn.classList.toggle('on', notifyEnabled);
+    if (nKnob) nKnob.style.left = '';
+  }
+  if (sBtn) {
+    sBtn.classList.toggle('on', soundEnabled);
+    if (sKnob) sKnob.style.left = '';
+  }
+  if (sIcon) {
+    sIcon.className = `bx ${soundEnabled ? 'bx-volume-full' : 'bx-volume-mute'} text-lg text-brand-red`;
+  }
+};
+
+const toggleNotify = () => {
+  notifyEnabled = !notifyEnabled;
+  localStorage.setItem('notifyEnabled', notifyEnabled);
+  showToast(notifyEnabled ? 'เปิดการแจ้งเตือน' : 'ปิดการแจ้งเตือน', true, notifyEnabled ? 'success' : 'error');
+  updateToggleUI();
+};
+
+const toggleSound = () => {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled);
+  if(soundEnabled) {
+    playNotifySound();
+  }
+  showToast(soundEnabled ? 'เปิดเสียงแจ้งเตือน' : 'ปิดเสียงแจ้งเตือน', true, soundEnabled ? 'success' : 'error');
+  updateToggleUI();
+};
+
+const handleResize = () => {
+  isMobile = window.innerWidth < 1024;
+};
+
+const pageLabels = {
+  dashboard: 'หน้าหลัก',
+  employees: 'พนักงาน',
+  roles: 'สิทธิ์และบทบาท',
+  departments: 'แผนก',
+  positions: 'ตำแหน่ง'
+};
+
+const updateNavigationChrome = (page) => {
+  const label = pageLabels[page] || page;
+  const title = qs('#navTitle');
+  const breadcrumb = qs('#navBreadcrumb');
+  if (title) title.textContent = label;
+  if (breadcrumb) {
+    const appName = (typeof apiConfig !== 'undefined' && apiConfig.nameEng) ? apiConfig.nameEng : 'Workspace';
+    breadcrumb.innerHTML = `<i class="bx bx-home-alt"></i> ${appName} / ${label}`;
+  }
+  qsa(".menu-item, .rail-btn, .mobile-nav-item, .sb-item").forEach((item) => {
+    item.classList.toggle("active-card", item.dataset.page === page);
+    item.classList.toggle("menu-active", item.dataset.page === page);
+  });
+};
+
+const openMobileDrawer = () => {
+  qs('#rail')?.classList.add('drawer-open');
+  qs('#sidebar')?.classList.add('drawer-open');
+  qs('#drawerScrim')?.classList.remove('hidden');
+};
+
+const closeMobileDrawer = () => {
+  qs('#rail')?.classList.remove('drawer-open');
+  qs('#sidebar')?.classList.remove('drawer-open');
+  qs('#drawerScrim')?.classList.add('hidden');
+};
+
+const toggleSidebarShell = () => {
+  const sidebar = qs('#sidebar');
+  if (!sidebar) return;
+  if (window.innerWidth < 1025) {
+    if (qs('#rail')?.classList.contains('drawer-open')) closeMobileDrawer();
+    else openMobileDrawer();
+    return;
+  }
+  sidebar.dataset.open = String(sidebar.dataset.open === 'false');
+};
+
+const navigateTo = (page) => {
+  if (page === currentPage) return;
+  const newPage = qs(`#page-${page}`);
+  if (!newPage) {
+    showToast(`ยังไม่มีหน้าสำหรับเมนู ${page}`, true, 'info');
+    closeMobileDrawer();
+    return;
+  }
+
+  setTimeout(() => {
+    const newBtn = qs(`[data-page="${page}"]`);
+    if (newBtn && !newBtn.closest('.submenu')) {
+        qsa('.menu-btn.open').forEach(openBtn => {
+          openBtn.classList.remove('open');
+          const otherSubmenu = openBtn.parentElement.querySelector('.submenu');
+          if (otherSubmenu) {
+            otherSubmenu.classList.remove('open');
+            otherSubmenu.style.maxHeight = '';
+            otherSubmenu.style.opacity = '';
+            otherSubmenu.style.marginTop = '';
+          }
+        });
+    }
+  }, 50);
+
+  const allMenuItems = Array.from(qsa('.menu-item, .submenu-btn')); 
+  const oldIndex = allMenuItems.findIndex(el => 
+    el.dataset.page === currentPage || el.getAttribute('onclick')?.includes(`'${currentPage}'`)
+  );
+  const newIndex = allMenuItems.findIndex(el => 
+    el.dataset.page === page || el.getAttribute('onclick')?.includes(`'${page}'`)
+  );
+
+  const direction = newIndex >= oldIndex ? "up" : "down";
+  const outClass = direction === "up" ? "anim-slide-out-up" : "anim-slide-out-down";
+  const inClass = direction === "up" ? "anim-slide-in-up" : "anim-slide-in-down";
+
+  const oldPage = qs(`#page-${currentPage}`);
+  updateNavigationChrome(page);
+
+  currentPage = page;
+  localStorage.setItem("savedPage", currentPage);
+
+  if (oldPage && oldPage !== newPage) {
+    oldPage.classList.add(outClass);
+    setTimeout(() => {
+      oldPage.style.display = "none";
+      oldPage.classList.remove(outClass);
+      if (newPage) {
+        newPage.style.display = "block";
+        newPage.classList.add(inClass);
+        setTimeout(() => newPage.classList.remove(inClass), 300);
+      }
+    }, 200);
+  } else if (newPage) {
+    qsa(".page-section").forEach((s) => (s.style.display = "none"));
+    newPage.style.display = "block";
+    newPage.classList.add("anim-slide-in-up");
+    setTimeout(() => newPage.classList.remove("anim-slide-in-up"), 300);
+  }
+
+  if (page === 'clockin') {
+    setTimeout(initClockMap, 300);
+  }
+
+  const sheet = getActiveSheet();
+  if (sheet && sheet.id === 'menuSheet') closeSheet();
+  closeMobileDrawer();
+};
+
+const filterMenuCards = () => {
+  const query = qs("#menuSearchInput").value.toLowerCase().trim();
+  const groups = qsa(".menu-category-group");
+
+  groups.forEach(group => {
+    let hasVisibleCard = false;
+    const cards = group.querySelectorAll(".menu-card");
+
+    cards.forEach(card => {
+      const label = (card.querySelector(".menu-card-label")?.innerText || card.textContent || '').toLowerCase();
+      
+      if (label.includes(query)) {
+        card.style.display = '';
+        if (window.getComputedStyle(card).display !== 'none') {
+          hasVisibleCard = true;
+        }
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    if (hasVisibleCard) {
+      group.style.display = '';
+    } else {
+      group.style.display = 'none';
+    }
+  });
+};
+
+let cmdkIndex = 0;
+let cmdkItems = [];
+
+const getCommandItems = () => {
+  const isPageVisible = (page) => qsa(`[data-page="${page}"]`).some(el => !el.classList.contains('hidden'));
+  return [
+  { label: 'หน้าหลัก', icon: 'bxs-dashboard', page: 'dashboard' },
+  { label: 'พนักงาน', icon: 'bx-group', page: 'employees' },
+  { label: 'สิทธิ์และบทบาท', icon: 'bx-shield-quarter', page: 'roles' },
+  { label: 'แผนก', icon: 'bx-buildings', page: 'departments' },
+  { label: 'ตำแหน่ง', icon: 'bx-id-card', page: 'positions' },
+  { label: 'เปลี่ยนธีมสว่าง', icon: 'bx-sun', action: () => applyTheme('light') },
+  { label: 'เปลี่ยนธีมมืด', icon: 'bx-moon', action: () => applyTheme('dark') },
+  { label: 'เปลี่ยนเป็นมืด 2 โทน', icon: 'bx-moon', action: () => applyTheme('dark2') },
+  ].filter(item => !item.page || isPageVisible(item.page));
+};
+
+const renderCmdk = (query = '') => {
+  const list = qs('#cmdkList');
+  if (!list) return;
+  const q = query.toLowerCase().trim();
+  cmdkItems = getCommandItems().filter(item => item.label.toLowerCase().includes(q));
+  cmdkIndex = Math.min(cmdkIndex, Math.max(0, cmdkItems.length - 1));
+  if (!cmdkItems.length) {
+    list.innerHTML = `<div class="empty"><i class="bx bx-search-alt"></i><div>ไม่พบคำสั่ง "${query}"</div></div>`;
+    return;
+  }
+  list.innerHTML = `<div class="cmdk-group">คำสั่ง</div>` + cmdkItems.map((item, idx) => `
+    <div class="cmdk-item ${idx === cmdkIndex ? 'on' : ''}" data-cmdk="${idx}">
+      <i class="bx ${item.icon}"></i>
+      <span class="ci-t">${item.label}</span>
+      ${item.page ? '<span class="ci-k">ไปยังหน้า</span>' : '<span class="ci-k">ตั้งค่า</span>'}
+    </div>
+  `).join('');
+};
+
+const openCmdk = () => {
+  const scrim = qs('#cmdkScrim');
+  const input = qs('#cmdkInput');
+  if (!scrim || !input) return;
+  scrim.classList.remove('hidden');
+  input.value = '';
+  cmdkIndex = 0;
+  renderCmdk('');
+  setTimeout(() => input.focus(), 20);
+};
+
+const closeCmdk = () => qs('#cmdkScrim')?.classList.add('hidden');
+
+const runCmdk = () => {
+  const item = cmdkItems[cmdkIndex];
+  if (!item) return;
+  closeCmdk();
+  if (item.page) navigateTo(item.page);
+  if (item.action) item.action();
+};
+
+const moveCmdk = (delta) => {
+  if (!cmdkItems.length) return;
+  cmdkIndex = Math.max(0, Math.min(cmdkItems.length - 1, cmdkIndex + delta));
+  renderCmdk(qs('#cmdkInput')?.value || '');
+};
+
+const wireCommandPalette = () => {
+  qs('#globalSearchBtn')?.addEventListener('click', openCmdk);
+  qs('#cmdkScrim')?.addEventListener('click', (e) => {
+    if (e.target === qs('#cmdkScrim')) closeCmdk();
+  });
+  qs('#cmdkInput')?.addEventListener('input', (e) => {
+    cmdkIndex = 0;
+    renderCmdk(e.target.value);
+  });
+  qs('#cmdkInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveCmdk(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); moveCmdk(-1); }
+    if (e.key === 'Enter') { e.preventDefault(); runCmdk(); }
+    if (e.key === 'Escape') closeCmdk();
+  });
+  qs('#cmdkList')?.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-cmdk]');
+    if (!item) return;
+    cmdkIndex = Number(item.dataset.cmdk);
+    runCmdk();
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openCmdk();
+    }
+    if (e.key === 'Escape') {
+      closeCmdk();
+      closeMobileDrawer();
+      qsa('.pop.show').forEach(pop => {
+        pop.classList.remove('show');
+        pop.classList.add('hidden-pop');
+      });
+    }
+  });
+};
+
+const init = () => {
+  initDarkMode();
+  initDropdowns();
+  notifCenter._load();
+  notifCenter.render();
+  updateToggleUI();
+  handleResize();
+  wireCommandPalette();
+  updateNavigationChrome(currentPage);
+
+  qsa(".page-section").forEach((s) => (s.style.display = "none"));
+  const activePage = qs(`#page-${currentPage}`);
+  if (activePage) {
+    activePage.style.display = "block";
+  } else {
+    currentPage = "dashboard";
+    localStorage.setItem("savedPage", currentPage);
+    qs("#page-dashboard").style.display = "block";
+    updateNavigationChrome(currentPage);
+  }
+
+  qs('#menuToggle')?.addEventListener("click", toggleSidebarShell);
+  qs('#mobileRailBtn')?.addEventListener("click", openMobileDrawer);
+  qs('#railCollapseBtn')?.addEventListener("click", () => {
+    const rail = qs('#rail');
+    if (!rail) return;
+    rail.dataset.collapsed = String(rail.dataset.collapsed !== 'true');
+  });
+  qs('#sbCloseBtn')?.addEventListener("click", () => {
+    if (window.innerWidth < 1025) closeMobileDrawer();
+    else {
+      const sidebar = qs('#sidebar');
+      if (sidebar) sidebar.dataset.open = 'false';
+    }
+  });
+  qs('#drawerScrim')?.addEventListener("click", closeMobileDrawer);
+  window.addEventListener("resize", handleResize);
+};
+
+window.configSettings = () => {
+  // กัน apiConfig ยังไม่พร้อม
+  if (typeof apiConfig === 'undefined') {
+    console.warn('apiConfig ยังไม่ถูก inject');
+    return;
+  }
+ 
+  // ใช้ array แทนการเขียน getElementById/if ซ้ำ ๆ
+  const setSrc = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val) el.src = val;
+  };
+  const setText = (id, val) => {
+    const el = document.getElementById(id); 
+    if (el) el.textContent = val ?? '';
+  };
+ 
+  // logo ทุกที่ใช้ค่าเดียวกัน
+  ['login-Logo', 'system-LogoA', 'system-LogoB', 'orderCompanyLogo', 'system-LoaderA', 'system-LoaderB']
+    .forEach(id => setSrc(id, apiConfig.logoSystem));
+ 
+  // ชื่อ Eng
+  ['login-NameEng', 'system-NameEngA', 'system-NameEngB', 'orderCompanyNameEng']
+    .forEach(id => setText(id, apiConfig.nameEng));
+ 
+  // ชื่อ Thai
+  ['login-NameThai', 'system-NameThaiA', 'orderCompanyNameThai']
+    .forEach(id => setText(id, apiConfig.nameThai));
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof init === 'function') init();
+  if (typeof loadAvatars === 'function') loadAvatars();
+
+  loadRememberedData();
+
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  
+  if (isLoggedIn && !isSessionExpired()) {
+    const savedUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const savedMenus = JSON.parse(localStorage.getItem('userMenus') || '[]');
+
+    updateLoginUI(true, savedUser);
+    
+    if (savedMenus.length > 0) {
+      setDisPlayMenu(savedMenus);
+    }
+
+    loadingData().then(() => {
+      if (savedUser.department) {
+        renderDeptTimeInfo(savedUser.department);
+      }
+      loadTodayClockLog();
+      if (typeof currentPage !== 'undefined' && currentPage === 'clockin') {
+        setTimeout(initClockMap, 300);
+      }
+    });
+
+  } else {
+    clearUserSession();
+    updateLoginUI(false);
+  }
+});
+
+const setDisPlayMenu = (allowedMenuCodes) => {
+  const allMenuCodes = JSON.parse(localStorage.getItem('allMenuCodes') || '[]');
+  allMenuCodes.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = ''; 
+      el.classList.add('hidden'); 
+      const page = el.dataset.page;
+      if (page) qsa(`[data-page="${page}"]`).forEach(node => node.classList.add('hidden'));
+    }
+  });
+  allowedMenuCodes.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('hidden'); 
+      const page = el.dataset.page;
+      if (page) qsa(`[data-page="${page}"]`).forEach(node => node.classList.remove('hidden'));
+    }
+  });
+  updateMenuVisibility();
+};
+
+const updateMenuVisibility = () => {
+  const categoryGroups = document.querySelectorAll('.menu-category-group');
+
+  categoryGroups.forEach(group => {
+    const buttons = group.querySelectorAll('.menu-card');
+    
+    const hasVisibleButton = Array.from(buttons).some(btn => {
+       return !btn.classList.contains('hidden');
+    });
+
+    if (hasVisibleButton) {
+      group.classList.remove('hidden');
+    } else {
+      group.classList.add('hidden');
+    }
+  });
+}
+
+const handleRememberMe = (username, shouldRemember) => {
+  if (shouldRemember) {
+    localStorage.setItem("rememberUsername", username);
+    localStorage.setItem("rememberMe", "true");
+  } else {
+    localStorage.removeItem("rememberUsername");
+    localStorage.removeItem("rememberMe");
+  }
+};
+
+const loadRememberedData = () => {
+  const rememberedUsername = localStorage.getItem("rememberUsername");
+  const isRemembered       = localStorage.getItem("rememberMe") === "true";
+  
+  if (rememberedUsername && isRemembered) {
+    document.getElementById("loginusername").value = rememberedUsername;
+    document.getElementById("remember").checked    = true;
+  }
+};
+
+const setUserSession = (user, allowedMenus) => {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  localStorage.setItem('userMenus', JSON.stringify(allowedMenus));
+  localStorage.setItem('isLoggedIn', 'true');
+  localStorage.setItem('loginTime', new Date().getTime());
+  localStorage.setItem('userRoles', JSON.stringify(user.userRoles   || []));
+  localStorage.setItem('roleActions', JSON.stringify(user.roleActions  || []));
+};
+
+const clearUserSession = () => {
+  ['currentUser', 'isLoggedIn', 'loginTime', 'userMenus', 'allMenuCodes', 'userRoles', 'roleActions']
+    .forEach(k => localStorage.removeItem(k));
+
+  document.querySelectorAll('input, textarea').forEach(el => {
+    if (!['loginusername', 'loginPassword', 'remember'].includes(el.id)) {
+      el.value = '';
+    }
+  });
+
+  const sysProfileAvatar = document.getElementById('sysProfileAvatar');
+  if (sysProfileAvatar) sysProfileAvatar.src = "https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-1.png";
+};
+
+const isSessionExpired = () => {
+  const loginTime = localStorage.getItem('loginTime');
+  if (!loginTime) return true;
+  return (new Date().getTime() - parseInt(loginTime)) > (24 * 60 * 60 * 1000);
+};
+
+const loginUsers = () => {
+  event.preventDefault();
+  showLoader();
+
+  const username = document.getElementById("loginusername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const rememberMeChecked = document.getElementById("remember").checked;
+
+  if (!username || !password) {
+    hideLoader();
+    showToast("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน", false, "error");
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(async (datauser) => {
+      if (typeof datauser === "object" && datauser !== null) {
+        handleRememberMe(username, rememberMeChecked);
+        setUserSession(datauser, datauser.allowedMenuCodes);
+        localStorage.setItem('allMenuCodes', JSON.stringify(datauser.allMenuCodes));
+
+        updateLoginUI(true, datauser);
+        setDisPlayMenu(datauser.allowedMenuCodes);
+        await loadingData();
+
+        if (datauser.department) {
+          renderDeptTimeInfo(datauser.department);
+        }
+        loadTodayClockLog();
+        if (typeof currentPage !== 'undefined' && currentPage === 'clockin') {
+          setTimeout(initClockMap, 300);
+        }
+        showToast(`เข้าสู่ระบบสำเร็จ ยินดีต้อนรับคุณ ${datauser.firstname} ${datauser.lastname}`, false, "success");
+        setTimeout(() => hideLoader(), 300);
+
+      } else {
+        hideLoader();
+        showToast(datauser, false, "error");
+      }
+    })
+    .withFailureHandler((err) => {
+      hideLoader();
+      console.error("Login error:", err);
+      showToast("เกิดข้อผิดพลาดในการเข้าสู่ระบบ", false, "error");
+    })
+    .checkLogin(username, password);
+};
+
+const updateLoginUI = (isLoggedIn, user = {}) => {
+  const showLogin = document.getElementById("pageformLogin");
+  const dashboard = document.getElementById("dashboardPage");
+
+  if (isLoggedIn) {
+    showLogin.style.display = "none";
+    dashboard.style.display = "block";
+
+    const userImg = user.imgUser && user.imgUser !== "" && user.imgUser !== "null" ? user.imgUser : null;
+
+    if (userImg) {
+      $("#header-profile-img").attr("src", userImg).removeClass("hidden").show();
+      $("#sidebar-profile-img").attr("src", userImg).removeClass("hidden").show();
+      $("#dropdown-profile-img").attr("src", userImg).removeClass("hidden").show();
+      
+      $("#header-profile-icon").addClass("hidden").hide();
+      $("#sidebar-profile-icon").addClass("hidden").hide();
+      $("#dropdown-profile-icon").addClass("hidden").hide();
+    } else {
+      $("#header-profile-img").addClass("hidden").hide();
+      $("#sidebar-profile-img").addClass("hidden").hide();
+      $("#dropdown-profile-img").addClass("hidden").hide();
+      
+      $("#header-profile-icon").removeClass("hidden").show();
+      $("#sidebar-profile-icon").removeClass("hidden").show();
+      $("#dropdown-profile-icon").removeClass("hidden").show();
+    }
+
+    const fullName = `${user.firstname || ''} ${user.lastname || ''}`.trim() || user.username || "User";
+    
+    $("#header-profile-name").text(user.firstname || user.username || "Admin");
+    $("#dropdown-user-name").text(fullName);
+    $("#dropdown-user-email").text(user.email || '');
+    $("#showadmin").text(fullName);
+    $("#showemail").text(user.email || '');
+
+    if (document.getElementById("orderBuyer")) {
+      $("#orderBuyer").val(fullName);
+    }
+
+    updateStatusUI(user.action || 'online');
+
+    const dashName = document.getElementById('dash-user-name');
+    const dashImg = document.getElementById('dash-profile-img');
+    const dashIcon = document.getElementById('dash-profile-icon');
+
+    if (dashName) dashName.textContent = user.firstname || user.username || 'Admin';
+
+    if (userImg && dashImg && dashIcon) {
+      dashImg.src = userImg;
+      dashImg.classList.remove('hidden');
+      dashIcon.classList.add('hidden');
+    } else if (dashImg && dashIcon) {
+      dashImg.classList.add('hidden');
+      dashIcon.classList.remove('hidden');
+    }
+    updateClockUserUI(user);
+    initClockDisplay();
+  } else {
+    showLogin.style.display = "flex";
+    dashboard.style.display = "none";
+  }
+
+  if (window.cndRefresh) window.cndRefresh();
+};
+
+const updateStatusUI = (action) => {
+  $("#status-dot-online, #status-dot-offline, #status-dot-dnd").removeClass("animate-pulse shadow-lg");
+  const dashStatusDot  = document.getElementById('dash-status-dot');
+  const clockStatusDot = document.getElementById('clock-status-dot');
+  const headerStatusDot = document.getElementById('header-status-dot');
+
+  if (action === 'online') {
+    $("#status-dot-online").addClass("animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]");
+    $("#header-profile-status").text("ออนไลน์");
+    if (headerStatusDot) headerStatusDot.style.background = 'var(--success)';
+    if (dashStatusDot)  dashStatusDot.className  = 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-900';
+    if (clockStatusDot) clockStatusDot.className = 'absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]';
+
+  } else if (action === 'offline') {
+    $("#status-dot-offline").addClass("animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]");
+    $("#header-profile-status").text("ออฟไลน์");
+    if (headerStatusDot) headerStatusDot.style.background = 'var(--warning)';
+    if (dashStatusDot)  dashStatusDot.className  = 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-900';
+    if (clockStatusDot) clockStatusDot.className = 'absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]';
+
+  } else if (action === 'dnd') {
+    $("#status-dot-dnd").addClass("animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]");
+    $("#header-profile-status").text("ห้ามรบกวน");
+    if (headerStatusDot) headerStatusDot.style.background = 'var(--danger)';
+    if (dashStatusDot)  dashStatusDot.className  = 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-900';
+    if (clockStatusDot) clockStatusDot.className = 'absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+  }
+};
+
+const getCurrentUserId = () =>
+  JSON.parse(localStorage.getItem('currentUser') || '{}')?.uiduser || '';
+
+const getCurrentUserRoles = () =>
+  JSON.parse(localStorage.getItem('userRoles') || '[]');
+
+const getRoleActions = () =>
+  JSON.parse(localStorage.getItem('roleActions') || '[]');
+
+const Permissions = {
+  can: (action) => {
+    const myRoles = getCurrentUserRoles();
+    return getRoleActions().some(r =>
+      myRoles.includes(r.roleId) &&
+      r.action === action &&
+      r.enabled?.toLowerCase() === 'true'
+    );
+  }
+};
+
+const changeProfileForm = () => {
+  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  
+  const { 
+    uiduser = '', username = '', password = '', email = '', 
+    firstname = '', lastname = '', department = '', positions = '', 
+    status = 'active', imgUser = '', sigUser = '' 
+  } = user;
+
+  const fUserId = document.getElementById('fUserId');
+  const fUsername = document.getElementById('fUsername');
+  const fPassword = document.getElementById('fPassword');
+  const fEmail = document.getElementById('fEmail');
+  const fFirstName = document.getElementById('fFirstName');
+  const fLastName = document.getElementById('fLastName');
+  const fDepartment = document.getElementById('fDepartment');
+  const fPositions = document.getElementById('fPositions');
+  const fStatus = document.getElementById('fStatus');
+  const sysProfileAvatar = document.getElementById('sysProfileAvatar');
+
+  if (fUserId) fUserId.value = uiduser;
+  if (fUsername) fUsername.value = username;
+  if (fPassword) fPassword.value = password;
+  if (fEmail) fEmail.value = email;
+  if (fFirstName) fFirstName.value = firstname;
+  if (fLastName) fLastName.value = lastname;
+  if (fDepartment) fDepartment.value = department;
+  if (fPositions) fPositions.value = positions;
+  
+  if (fStatus) fStatus.value = status;
+
+  if (sysProfileAvatar) {
+    if (imgUser && imgUser !== "null" && imgUser.trim() !== "") {
+      sysProfileAvatar.src = imgUser;
+    } else {
+      sysProfileAvatar.src = "https://cdn.jsdelivr.net/gh/EPICCODING17/image/user-1.png";
+    }
+  }
+
+  const sysSigPreview = document.getElementById('sysSigPreview');
+  const sysSigUploadPlaceholder = document.getElementById('sysSigUploadPlaceholder');
+
+  if (sigUser && sigUser !== "null" && sigUser.trim() !== "") {
+    if (sysSigPreview) {
+      sysSigPreview.src = sigUser;
+      sysSigPreview.classList.remove('hidden');
+    }
+    if (sysSigUploadPlaceholder) {
+      sysSigUploadPlaceholder.classList.add('hidden');
+    }
+    if (typeof setSysSigMode === 'function') {
+      setSysSigMode('upload');
+    }
+  } else {
+    if (sysSigPreview) {
+      sysSigPreview.src = "";
+      sysSigPreview.classList.add('hidden');
+    }
+    if (sysSigUploadPlaceholder) {
+      sysSigUploadPlaceholder.classList.remove('hidden');
+    }
+    if (typeof setSysSigMode === 'function') {
+      setSysSigMode('draw');
+    }
+  }
+};
+
+const logoutUsers = () => {
+  const oldBtn = document.getElementById('confirmLogout');
+  if (!oldBtn) return;
+
+  const newBtn = oldBtn.cloneNode(true);
+  oldBtn.replaceWith(newBtn);
+
+  newBtn.addEventListener('click', () => {
+    newBtn.disabled = true;
+    
+    if (typeof showLoader === 'function') showLoader();
+
+    if (typeof closeSheet === 'function') closeSheet(); 
+
+    setTimeout(() => {
+      if (typeof clearUserSession === 'function') clearUserSession();
+      if (typeof updateLoginUI === 'function') updateLoginUI(false);
+      
+      if (typeof showToast === 'function') showToast("ออกจากระบบแล้ว", false, "success");
+      
+      if (typeof hideLoader === 'function') hideLoader();
+      newBtn.disabled = false;
+    }, 300);
+  });
+
+  if (typeof openSheet === 'function') {
+      openSheet('confirmLogoutSheet');
+  }
+};
+
+window.addEventListener('load', function() {
+  const preloader = document.getElementById('preloaderOverlay');
+  document.body.appendChild(preloader);
+
+  setTimeout(() => {
+    if (preloader) {
+      preloader.style.opacity = '0';
+      preloader.style.visibility = 'hidden';
+      setTimeout(() => { preloader.style.display = 'none'; }, 1000);
+    }
+  }, 1100);
+});
+
+const showLoader = () => {
+  const preloader = document.getElementById('preloaderOverlay');
+  if (preloader) {
+    document.body.appendChild(preloader);
+    preloader.style.display = 'flex';
+    setTimeout(() => {
+      preloader.style.opacity = '1';
+      preloader.style.visibility = 'visible';
+    }, 10);
+  }
+};
+
+const hideLoader = () => {
+  const preloader = document.getElementById('preloaderOverlay');
+  if (preloader) {
+    preloader.style.opacity = '0';
+    preloader.style.visibility = 'hidden';
+    setTimeout(() => { preloader.style.display = 'none'; }, 500);
+  }
+};
+
+const sheetOverlay = qs('#globalSheetOverlay');
+let sheetStack = [];
+let sheetState = 'closed';
+let sheetDragging = false;
+let sheetStartY = 0;
+let sheetStartHeight = 0;
+let sheetPointerMoved = false;
+
+const HALF_VH = 55;
+const FULL_VH = 95;
+const vhToPx = (vh) => window.innerHeight * vh / 100;
+
+const getActiveSheet = () => sheetStack[sheetStack.length - 1] || null;
+
+const openSheet = (sheetId) => {
+  const sheetToOpen = qs(`#${sheetId}`);
+  if (!sheetToOpen) return;
+
+  if (sheetId === 'profileSheet') changeProfileForm();
+
+  if (sheetStack.includes(sheetToOpen)) return;
+
+  sheetStack.push(sheetToOpen);
+
+  sheetOverlay.classList.add('active');
+  sheetToOpen.style.height = '';
+  sheetToOpen.classList.remove('sheet-full');
+  sheetToOpen.classList.add('sheet-half');
+  sheetState = 'half';
+};
+
+const closeSheet = () => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+
+  const forms = sheet.querySelectorAll('form');
+  forms.forEach(form => form.reset());
+
+  sheet.style.transition = '';
+  sheet.style.height = '';
+  sheet.classList.remove('sheet-half', 'sheet-full');
+
+  sheetStack.pop();
+
+  if (sheetStack.length === 0) {
+    sheetOverlay.classList.remove('active');
+    sheetState = 'closed';
+  } else {
+    sheetState = 'half';
+  }
+};
+
+const closeAllSheets = () => {
+  while (sheetStack.length > 0) {
+    const sheet = sheetStack.pop();
+    sheet.style.transition = '';
+    sheet.style.height = '';
+    sheet.classList.remove('sheet-half', 'sheet-full');
+  }
+  sheetOverlay.classList.remove('active');
+  sheetState = 'closed';
+};
+
+const switchSheet = (newSheetId, prevSheetId) => {
+  if (prevSheetId) {
+    const prevSheet = document.getElementById(prevSheetId);
+    if (prevSheet) {
+      prevSheet.classList.remove('sheet-half', 'sheet-full');
+      prevSheet.style.height = '';
+    }
+  }
+  openSheet(newSheetId);
+};
+
+const switchBackSheet = (currentSheetId, prevSheetId) => {
+  const current = document.getElementById(currentSheetId);
+  if (current) {
+    current.classList.remove('sheet-half', 'sheet-full');
+    current.style.height = '';
+    const idx = sheetStack.indexOf(current);
+    if (idx !== -1) sheetStack.splice(idx, 1);
+  }
+  const prev = document.getElementById(prevSheetId);
+  if (prev) {
+    if (!sheetStack.includes(prev)) sheetStack.push(prev);
+    prev.style.height = '';
+    prev.classList.remove('sheet-full');
+    prev.classList.add('sheet-half');
+    sheetState = 'half';
+  }
+};
+
+const setSheetHalf = () => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+  sheet.style.transition = '';
+  sheet.style.height = '';
+  sheet.classList.remove('sheet-full');
+  sheet.classList.add('sheet-half');
+  sheetState = 'half';
+};
+
+const setSheetFull = () => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+  sheet.style.transition = '';
+  sheet.style.height = '';
+  sheet.classList.remove('sheet-half');
+  sheet.classList.add('sheet-full');
+  sheetState = 'full';
+};
+
+const isScrollable = (el) => {
+  while (el && el !== document.body) {
+    const style = window.getComputedStyle(el);
+    const overflowY = style.overflowY;
+    const canScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+    if (canScroll && el.scrollHeight > el.clientHeight) return true;
+    el = el.parentElement;
+  }
+  return false;
+};
+
+const onDragStart = (e) => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+
+  sheetDragging = true;
+  sheetPointerMoved = false;
+  sheetStartY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+  sheetStartHeight = sheet.offsetHeight;
+  sheet.style.transition = 'none';
+};
+
+const onDragMove = (e) => {
+  const sheet = getActiveSheet();
+  if (!sheetDragging || !sheet) return;
+
+  sheetPointerMoved = true;
+
+  const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+  const delta = clientY - sheetStartY;
+
+  let newHeight = sheetStartHeight - delta;
+  newHeight = Math.max(0, Math.min(vhToPx(FULL_VH), newHeight));
+
+  sheet.classList.remove('sheet-half', 'sheet-full');
+  sheet.style.height = newHeight + 'px';
+
+  if (e.cancelable) e.preventDefault();
+};
+
+const onDragEnd = (e) => {
+  const sheet = getActiveSheet();
+  if (!sheetDragging || !sheet) return;
+
+  sheetDragging = false;
+
+  const clientY = e.type === 'touchend' ? e.changedTouches[0].clientY : e.clientY;
+  const delta = clientY - sheetStartY;
+  sheet.style.transition = '';
+
+  if (!sheetPointerMoved) return;
+
+  if (sheetState === 'half') {
+    if (delta < -60) setSheetFull();
+    else if (delta > 80) closeSheet();
+    else setSheetHalf();
+  } else if (sheetState === 'full') {
+    if (delta > 80) setSheetHalf();
+    else setSheetFull();
+  }
+};
+
+document.addEventListener('mousedown', (e) => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+
+  if (e.target.closest('.drag-handle')) {
+    onDragStart(e);
+    return;
+  }
+
+  if (
+    sheet.contains(e.target) &&
+    !e.target.closest('input, textarea, select, button, a, canvas, [contenteditable], .no-drag')
+  ) {
+    onDragStart(e);
+  }
+});
+
+document.addEventListener('touchstart', (e) => {
+  const sheet = getActiveSheet();
+  if (!sheet) return;
+
+  if (e.target.closest('.drag-handle')) {
+    onDragStart(e);
+    return;
+  }
+
+  if (isScrollable(e.target)) return;
+
+  if (
+    sheet.contains(e.target) &&
+    !e.target.closest('input, textarea, select, button, a, canvas, [contenteditable], .no-drag')
+  ) {
+    onDragStart(e);
+  }
+}, { passive: true });
+
+document.addEventListener('mousemove', (e) => {
+  if (sheetDragging) onDragMove(e);
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (sheetDragging) onDragMove(e);
+}, { passive: false });
+
+document.addEventListener('mouseup', onDragEnd);
+document.addEventListener('touchend', onDragEnd);
+
+sheetOverlay.addEventListener('click', () => closeSheet());
+
+const moveTaxFocus = (el, nextId) => {
+  if (el.value.length >= 1 && nextId) {
+    document.getElementById(nextId)?.focus();
+  }
+};
+
+const getTaxValue = (prefix) => {
+  const digits = [];
+  for (let i = 0; i <= 12; i++) {
+    digits.push(document.getElementById(`${prefix}Tax${i}`)?.value || '');
+  }
+  return `${digits[0]}-${digits[1]}${digits[2]}${digits[3]}${digits[4]}-${digits[5]}${digits[6]}${digits[7]}${digits[8]}${digits[9]}-${digits[10]}${digits[11]}-${digits[12]}`;
+};
+
+const setTaxValue = (prefix, taxStr) => {
+  if (!taxStr) return;
+  const clean = taxStr.replace(/-/g, '');
+  for (let i = 0; i < 13; i++) {
+    const el = document.getElementById(`${prefix}Tax${i}`);
+    if (el) el.value = clean[i] || '';
+  }
+};
+
+const clearTaxInputs = (prefix) => {
+  for (let i = 0; i <= 12; i++) {
+    const el = document.getElementById(`${prefix}Tax${i}`);
+    if (el) el.value = '';
+  }
+};
+
+document.addEventListener('keydown', (e) => {
+  const el = e.target;
+  if (!el.id?.match(/^(sup|cus|saleCus)Tax\d+$/)) return;
+
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (el.value !== '') {
+      el.value = '';
+    } else {
+      const match  = el.id.match(/^(.+Tax)(\d+)$/);
+      if (!match) return;
+      const prefix = match[1];
+      const idx    = parseInt(match[2]);
+      if (idx > 0) {
+        const prevEl = document.getElementById(`${prefix}${idx - 1}`);
+        if (prevEl) { prevEl.focus(); prevEl.value = ''; }
+      }
+    }
+    if (el.id?.startsWith('saleCus')) setTimeout(checkSaleTaxInSystem, 50);
+    return;
+  }
+
+  if (/[0-9]/.test(e.key)) {
+    e.preventDefault();
+    el.value = e.key;
+
+    const nextId = el.getAttribute('data-next');
+    if (nextId) {
+      document.getElementById(nextId)?.focus();
+    } else {
+      const match = el.id.match(/^(.+Tax)(\d+)$/);
+      if (match) {
+        const nextEl = document.getElementById(`${match[1]}${parseInt(match[2]) + 1}`);
+        if (nextEl) nextEl.focus();
+      }
+    }
+
+    if (el.id?.startsWith('saleCus')) setTimeout(checkSaleTaxInSystem, 50);
+    return;
+  }
+
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+  }
+});
+</script>

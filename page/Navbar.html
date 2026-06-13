@@ -1,0 +1,139 @@
+<header id="navbar" class="navbar">
+  <button class="btn-icon util-hidden" id="mobileRailBtn" aria-label="เปิดเมนู">
+    <i class="bx bx-menu"></i>
+  </button>
+
+  <button id="menuToggle" class="btn-icon" aria-label="สลับเมนูย่อย" title="สลับเมนูย่อย">
+    <i class="bx bx-sidebar"></i>
+  </button>
+
+  <div class="nav-title">
+    <span class="t" id="navTitle">หน้าหลัก</span>
+    <span class="b" id="navBreadcrumb"><i class="bx bx-home-alt"></i> <span id="system-NameEngB"></span> / หน้าหลัก</span>
+  </div>
+
+  <button class="global-search" id="globalSearchBtn" type="button" aria-label="ค้นหาเมนู">
+    <i class="bx bx-search"></i>
+    <span>ค้นหาเมนูหรือคำสั่ง...</span>
+    <span class="kbd">Ctrl K</span>
+  </button>
+
+  <div class="nav-right">
+    <button class="btn btn-primary nav-create" id="quickCreateBtn" type="button" onclick="navigateTo('employees')">
+      <i class="bx bx-plus"></i>
+      <span class="label-md">เพิ่มข้อมูล</span>
+    </button>
+
+    <div class="nav-pop-wrap">
+      <button id="notifBellBtn" class="btn-icon" aria-label="การแจ้งเตือน">
+        <i id="notifBellIcon" class="bx bx-bell"></i>
+        <span id="notifBadge" class="nav-badge">0</span>
+        <span id="bellSpinnerRing" class="bell-spinner-ring"></span>
+      </button>
+
+      <div id="notifDropdownMenu" class="pop as-sheet hidden-pop" role="dialog" aria-label="การแจ้งเตือน">
+        <div class="pop-head">
+          <span class="h">การแจ้งเตือน</span>
+          <button id="notifClearAllBtn" class="btn btn-ghost">ล้างทั้งหมด</button>
+        </div>
+        <div id="notifList" class="notif-dropdown">
+          <div id="notifEmpty" class="notif-empty">
+            <i class="bx bx-bell-off"></i> ไม่มีการแจ้งเตือน
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-pop-wrap">
+      <button id="settingsDropdownBtn" class="btn-icon" aria-label="ตั้งค่าด่วน">
+        <i class="bx bx-slider-alt"></i>
+      </button>
+
+      <div id="settingsDropdownMenu" class="pop as-sheet hidden-pop quick-settings-pop" role="dialog" aria-label="ตั้งค่าด่วน">
+        <div class="pop-head">
+          <span class="h">ตั้งค่าด่วน</span>
+        </div>
+        <div class="appr">
+          <div class="appr-row">
+            <span class="appr-lbl"><i class="bx bx-palette"></i> ธีม</span>
+          </div>
+          <div class="seg seg-icon" id="profileTheme">
+            <button type="button" data-theme-set="light" title="สว่าง"><i class="bx bx-sun"></i><span>สว่าง</span></button>
+            <button type="button" data-theme-set="dark" title="มืด"><i class="bx bx-moon"></i><span>มืด</span></button>
+            <button type="button" data-theme-set="dark2" title="มืด 2 โทน"><i class="bx bx-moon"></i><span>2 โทน</span></button>
+          </div>
+
+          <div class="appr-row">
+            <span class="appr-lbl"><i class="bx bx-list-ul"></i> ความหนาแน่น UI</span>
+          </div>
+          <div class="seg" id="profileDensity">
+            <button type="button" data-density-set="sm">เล็ก</button>
+            <button type="button" data-density-set="compact">กระชับ</button>
+            <button type="button" data-density-set="md">กลาง</button>
+            <button type="button" data-density-set="lg">ใหญ่</button>
+          </div>
+
+          <div class="set-row compact">
+            <div class="sl"><div class="a">การแจ้งเตือน</div><div class="b">แสดง toast และ notification center</div></div>
+            <button id="notifyToggleBtn" onclick="toggleNotify()" class="toggle-btn"><span id="notifyToggleKnob"></span></button>
+          </div>
+          <div class="set-row compact">
+            <div class="sl"><div class="a">เสียงแจ้งเตือน</div><div class="b">เล่นเสียงเมื่อมีรายการใหม่</div></div>
+            <button id="soundToggleBtn" onclick="toggleSound()" class="toggle-btn"><span id="soundToggleKnob"></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-pop-wrap">
+      <button id="profileDropdownBtn" class="nav-profile" aria-label="โปรไฟล์">
+        <span class="np-av">
+          <img id="header-profile-img" src="" class="hidden" alt="">
+          <i id="header-profile-icon" class="bx bxs-user"></i>
+          <span id="header-status-dot" class="np-online"></span>
+        </span>
+        <span class="np-meta">
+          <span class="np-name" id="header-profile-name">Admin</span>
+          <span class="np-status" id="header-profile-status">Online</span>
+        </span>
+      </button>
+
+      <div id="profileDropdownMenu" class="pop as-sheet hidden-pop profile-pop" role="menu" aria-label="โปรไฟล์">
+        <div class="prof-head">
+          <span class="avatar">
+            <img id="dropdown-profile-img" src="" class="hidden" alt="">
+            <i id="dropdown-profile-icon" class="bx bxs-user"></i>
+          </span>
+          <div>
+            <div class="nm" id="dropdown-user-name">Admin User</div>
+            <div class="sub" id="dropdown-user-email">admin@example.com</div>
+            <span class="chip chip-info">Workspace</span>
+          </div>
+        </div>
+        <div class="menu-sep"></div>
+        <button class="menu-item" type="button" onclick="openSheet('profileSheet')"><i class="bx bx-user-circle"></i> โปรไฟล์ของฉัน</button>
+        <button class="menu-item" type="button" onclick="changeUserStatus('online')"><span id="status-dot-online" class="dot status-online"></span> กำลังใช้งาน</button>
+        <button class="menu-item" type="button" onclick="changeUserStatus('offline')"><span id="status-dot-offline" class="dot status-offline"></span> ออฟไลน์</button>
+        <button class="menu-item" type="button" onclick="changeUserStatus('dnd')"><span id="status-dot-dnd" class="dot status-dnd"></span> ห้ามรบกวน</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item danger" id="logoutMenuBtn" type="button" onclick="logoutUsers();"><i class="bx bx-log-out"></i> ออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="cmdkScrim" class="cmdk-scrim hidden">
+  <div class="cmdk" role="dialog" aria-label="Command palette">
+    <div class="cmdk-search">
+      <i class="bx bx-search"></i>
+      <input id="cmdkInput" placeholder="พิมพ์ชื่อเมนูหรือคำสั่ง..." autocomplete="off">
+      <span class="kbd">ESC</span>
+    </div>
+    <div class="cmdk-list" id="cmdkList"></div>
+    <div class="cmdk-foot">
+      <span><span class="kbd">↑↓</span> เลื่อน</span>
+      <span><span class="kbd">Enter</span> เลือก</span>
+      <span><span class="kbd">ESC</span> ปิด</span>
+    </div>
+  </div>
+</div>

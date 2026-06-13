@@ -1,0 +1,96 @@
+<!-- ============================================================
+     HOME / DASHBOARD  (#page-dashboard) — Atlas design
+     Landing page. #dash-user-name / #dash-profile-* / #dash-status-dot
+     are populated by updateLoginUI()/updateStatusUI().
+     ============================================================ -->
+<div id="page-dashboard" class="page-section hidden">
+  <div class="page">
+
+    <!-- greeting / page head -->
+    <div class="page-head">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+        <div style="position:relative;flex:0 0 auto;">
+          <span class="avatar" style="width:52px;height:52px;font-size:20px;overflow:hidden;">
+            <img id="dash-profile-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+            <i id="dash-profile-icon" data-lucide="user" style="width:24px;height:24px;"></i>
+          </span>
+          <span id="dash-status-dot" style="position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--surface);"></span>
+        </div>
+        <div style="min-width:0;">
+          <h1 class="page-h1">สวัสดี, <span id="dash-user-name">ผู้ใช้งาน</span> 👋</h1>
+          <p class="page-sub">ภาพรวมระบบบริหารงานบุคคลของคุณวันนี้</p>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="navigateTo('clockin')">
+        <i data-lucide="clock" style="width:17px;height:17px;"></i> ลงเวลาเข้า-ออก
+      </button>
+    </div>
+
+    <!-- stat cards -->
+    <div class="stat-grid" style="margin-bottom:var(--gap);">
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);"><i data-lucide="users"></i></span>
+          <span class="chip chip-success"><i data-lucide="trending-up" style="width:13px;height:13px;"></i> +4.2%</span>
+        </div>
+        <div style="font-size:1.9em;font-weight:700;margin-top:14px;line-height:1;" id="statEmployees">—</div>
+        <div style="color:var(--text-muted);font-size:.9em;margin-top:4px;">พนักงานทั้งหมด</div>
+      </div>
+
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--success-soft);color:var(--success);"><i data-lucide="check-check"></i></span>
+          <span class="chip chip-info"><i data-lucide="clock" style="width:13px;height:13px;"></i> วันนี้</span>
+        </div>
+        <div style="font-size:1.9em;font-weight:700;margin-top:14px;line-height:1;" id="statPresent">—</div>
+        <div style="color:var(--text-muted);font-size:.9em;margin-top:4px;">มาทำงานวันนี้</div>
+      </div>
+
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--warning-soft);color:var(--warning);"><i data-lucide="calendar-days"></i></span>
+          <span class="chip chip-warning">รออนุมัติ</span>
+        </div>
+        <div style="font-size:1.9em;font-weight:700;margin-top:14px;line-height:1;" id="statLeave">—</div>
+        <div style="color:var(--text-muted);font-size:.9em;margin-top:4px;">คำขอลางาน</div>
+      </div>
+
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft,var(--surface-2));color:var(--accent,var(--primary));"><i data-lucide="folder-kanban"></i></span>
+          <span class="chip chip-muted">ทั้งหมด</span>
+        </div>
+        <div style="font-size:1.9em;font-weight:700;margin-top:14px;line-height:1;" id="statDepartments">—</div>
+        <div style="color:var(--text-muted);font-size:.9em;margin-top:4px;">แผนก</div>
+      </div>
+    </div>
+
+    <!-- two-column panels -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--gap);">
+
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h2 style="font-size:1.05em;font-weight:600;">ทางลัด</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <button class="btn btn-outline" style="justify-content:flex-start;" onclick="navigateTo('employees')"><i data-lucide="users" style="width:17px;height:17px;"></i> พนักงาน</button>
+          <button class="btn btn-outline" style="justify-content:flex-start;" onclick="navigateTo('departments')"><i data-lucide="folder-kanban" style="width:17px;height:17px;"></i> จัดการฝ่าย</button>
+          <button class="btn btn-outline" style="justify-content:flex-start;" onclick="navigateTo('positions')"><i data-lucide="star" style="width:17px;height:17px;"></i> ตำแหน่ง</button>
+          <button class="btn btn-outline" style="justify-content:flex-start;" onclick="navigateTo('roles')"><i data-lucide="shield" style="width:17px;height:17px;"></i> สิทธิ์การใช้งาน</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:var(--pad);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h2 style="font-size:1.05em;font-weight:600;">กิจกรรมล่าสุด</h2>
+          <span class="chip chip-muted">เร็ว ๆ นี้</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-faint);padding:24px 0;">
+          <i data-lucide="activity" style="width:30px;height:30px;"></i>
+          <span style="font-size:.9em;">ยังไม่มีกิจกรรม</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

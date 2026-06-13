@@ -1,0 +1,145 @@
+<div class="drawer-scrim hidden" id="drawerScrim"></div>
+
+<nav class="rail" id="rail" data-collapsed="false" aria-label="เมนูหลัก">
+  <div class="rail-logo">
+    <img id="system-LogoA" src="" alt="" />
+    <i class="bx bx-cube-alt rail-logo-fallback"></i>
+  </div>
+
+  <div class="rail-items" id="railItems">
+    <button id="sidebarManu1" class="rail-btn menu-item" data-page="dashboard" data-tip="หน้าหลัก" onclick="navigateTo('dashboard')">
+      <i class="bx bxs-dashboard"></i><span>หน้าหลัก</span>
+    </button>
+    <button id="sidebarManu15" class="rail-btn menu-item" data-page="employees" data-tip="พนักงาน" onclick="navigateTo('employees')">
+      <i class="bx bx-group"></i><span>พนักงาน</span>
+    </button>
+    <button id="sidebarManu16" class="rail-btn menu-item" data-page="roles" data-tip="สิทธิ์" onclick="navigateTo('roles')">
+      <i class="bx bx-shield-quarter"></i><span>สิทธิ์</span>
+    </button>
+    <button id="sidebarManu17" class="rail-btn menu-item" data-page="departments" data-tip="แผนก" onclick="navigateTo('departments')">
+      <i class="bx bx-buildings"></i><span>แผนก</span>
+    </button>
+    <button id="sidebarManu18" class="rail-btn menu-item" data-page="positions" data-tip="ตำแหน่ง" onclick="navigateTo('positions')">
+      <i class="bx bx-id-card"></i><span>ตำแหน่ง</span>
+    </button>
+    <button id="sidebarManu24" class="rail-btn menu-item is-soon" data-page="settings" data-tip="ตั้งค่า" onclick="showToast('หน้าตั้งค่าจะเชื่อมต่อในรอบถัดไป', true, 'info')">
+      <i class="bx bxs-cog"></i><span>ตั้งค่า</span>
+    </button>
+  </div>
+
+  <div class="rail-foot">
+    <button class="rail-btn" id="railCollapseBtn" type="button" data-tip="ย่อ/ขยายเมนู">
+      <i class="bx bx-sidebar"></i><span>ย่อ</span>
+    </button>
+  </div>
+</nav>
+
+<aside class="sidebar" id="sidebar" data-open="true" aria-label="เมนูย่อย">
+  <div class="sb-head">
+    <div class="sb-ws">
+      <span class="avatar">
+        <img id="sidebar-profile-img" src="" class="hidden" alt="">
+        <i id="sidebar-profile-icon" class="bx bxs-user"></i>
+      </span>
+      <div>
+        <div class="nm" id="showadmin">Admin User</div>
+        <div class="sub" id="showemail">admin@example.com</div>
+      </div>
+    </div>
+    <button class="btn-icon" id="sbCloseBtn" type="button" aria-label="ปิดเมนูย่อย">
+      <i class="bx bx-chevron-left"></i>
+    </button>
+  </div>
+
+  <div class="sb-search">
+    <i class="bx bx-search"></i>
+    <input type="text" id="menuSearchInput" onkeyup="filterMenuCards()" placeholder="ค้นหาเมนู...">
+  </div>
+
+  <div class="sb-body" id="sidebarBody">
+    <div id="sidebarGroup1" class="menu-category-group">
+      <div id="sidebarTopic1" class="sb-section-title category-title">ภาพรวม</div>
+      <button class="sb-item menu-card menu-item" data-page="dashboard" onclick="navigateTo('dashboard')">
+        <i class="bx bxs-dashboard"></i><span class="menu-card-label">Dashboard</span>
+      </button>
+    </div>
+
+    <div id="sidebarGroup5" class="menu-category-group">
+      <div id="sidebarTopic5" class="sb-section-title category-title">บุคลากร</div>
+      <button class="sb-item menu-card menu-item" data-page="employees" onclick="navigateTo('employees')">
+        <i class="bx bx-group"></i><span class="menu-card-label">พนักงาน</span>
+      </button>
+      <button class="sb-item menu-card menu-item" data-page="roles" onclick="navigateTo('roles')">
+        <i class="bx bx-shield-quarter"></i><span class="menu-card-label">สิทธิ์และบทบาท</span>
+      </button>
+      <button class="sb-item menu-card menu-item" data-page="departments" onclick="navigateTo('departments')">
+        <i class="bx bx-buildings"></i><span class="menu-card-label">แผนก</span>
+      </button>
+      <button class="sb-item menu-card menu-item" data-page="positions" onclick="navigateTo('positions')">
+        <i class="bx bx-id-card"></i><span class="menu-card-label">ตำแหน่ง</span>
+      </button>
+    </div>
+
+    <div id="sidebarGroup2" class="menu-category-group muted-group">
+      <div id="sidebarTopic2" class="sb-section-title category-title">ลงเวลา/ลา</div>
+      <button id="sidebarManu2" class="sb-item menu-card menu-item is-soon" data-page="clockin" onclick="showToast('เมนูลงเวลายังไม่ได้เปิดในชุดหน้านี้', true, 'info')">
+        <i class="bx bx-time-five"></i><span class="menu-card-label">ลงเวลาเข้า-ออก</span><span class="count">Soon</span>
+      </button>
+      <button id="sidebarManu3" class="sb-item menu-card menu-item is-soon" data-page="leave" onclick="showToast('เมนูลางานยังไม่ได้เปิดในชุดหน้านี้', true, 'info')">
+        <i class="bx bx-briefcase-alt-2"></i><span class="menu-card-label">ลางาน</span><span class="count">Soon</span>
+      </button>
+      <button id="sidebarManu4" class="sb-item menu-card menu-item is-soon" data-page="manage_times" onclick="showToast('เมนูจัดการเวลาอยู่ระหว่างเชื่อมต่อ', true, 'info')">
+        <i class="bx bx-list-check"></i><span class="menu-card-label">จัดการเวลา</span><span class="count">Soon</span>
+      </button>
+      <button id="sidebarManu5" class="sb-item menu-card menu-item is-soon" data-page="manage_leave" onclick="showToast('เมนูจัดการลางานอยู่ระหว่างเชื่อมต่อ', true, 'info')">
+        <i class="bx bx-calendar-check"></i><span class="menu-card-label">จัดการลางาน</span><span class="count">Soon</span>
+      </button>
+    </div>
+
+    <div id="sidebarGroup6" class="menu-category-group muted-group">
+      <div id="sidebarTopic6" class="sb-section-title category-title">ระบบ</div>
+      <button id="sidebarManu22" class="sb-item menu-card menu-item is-soon" data-page="reports" onclick="showToast('รายงานจะเชื่อมต่อในรอบถัดไป', true, 'info')">
+        <i class="bx bx-bar-chart-alt-2"></i><span class="menu-card-label">รายงาน</span><span class="count">Soon</span>
+      </button>
+      <button id="sidebarManu23" class="sb-item menu-card menu-item is-soon" data-page="locations" onclick="showToast('สถานที่จะเชื่อมต่อในรอบถัดไป', true, 'info')">
+        <i class="bx bx-location-plus"></i><span class="menu-card-label">สถานที่</span><span class="count">Soon</span>
+      </button>
+      <button class="sb-item menu-card menu-item is-soon" data-page="settings" onclick="showToast('ตั้งค่าระบบจะเชื่อมต่อในรอบถัดไป', true, 'info')">
+        <i class="bx bxs-cog"></i><span class="menu-card-label">ตั้งค่า</span><span class="count">Soon</span>
+      </button>
+    </div>
+
+    <div class="menu-category-group hidden">
+      <button id="sidebarManu6" class="menu-card menu-item" data-page="incoterm"></button>
+      <button id="sidebarManu7" class="menu-card menu-item" data-page="typework"></button>
+      <button id="sidebarManu8" class="menu-card menu-item" data-page="customerstype"></button>
+      <button id="sidebarManu9" class="menu-card menu-item" data-page="customers"></button>
+      <button id="sidebarManu10" class="menu-card menu-item" data-page="supplier"></button>
+      <button id="sidebarManu11" class="menu-card menu-item" data-page="shippinglocations"></button>
+      <button id="sidebarManu12" class="menu-card menu-item" data-page="containertypes"></button>
+      <button id="sidebarManu13" class="menu-card menu-item" data-page="containerqtyoptions"></button>
+      <button id="sidebarManu14" class="menu-card menu-item" data-page="vehicletypes"></button>
+      <button id="sidebarManu19" class="menu-card menu-item" data-page="settime"></button>
+      <button id="sidebarManu20" class="menu-card menu-item" data-page="holidays"></button>
+      <button id="sidebarManu21" class="menu-card menu-item" data-page="dayofweek"></button>
+    </div>
+  </div>
+</aside>
+
+<nav class="mobnav" id="mobnav" aria-label="เมนูมือถือ">
+  <button data-page="dashboard" class="mobile-nav-item menu-item" onclick="navigateTo('dashboard')">
+    <span class="mn-ic"><i class="bx bxs-dashboard"></i></span><span>หน้าหลัก</span>
+  </button>
+  <button data-page="employees" class="mobile-nav-item menu-item" onclick="navigateTo('employees')">
+    <span class="mn-ic"><i class="bx bx-group"></i></span><span>พนักงาน</span>
+  </button>
+  <button data-page="roles" class="mobile-nav-item menu-item" onclick="navigateTo('roles')">
+    <span class="mn-ic"><i class="bx bx-shield-quarter"></i></span><span>สิทธิ์</span>
+  </button>
+  <button data-page="departments" class="mobile-nav-item menu-item" onclick="navigateTo('departments')">
+    <span class="mn-ic"><i class="bx bx-buildings"></i></span><span>แผนก</span>
+  </button>
+  <button data-page="positions" class="mobile-nav-item menu-item" onclick="navigateTo('positions')">
+    <span class="mn-ic"><i class="bx bx-id-card"></i></span><span>ตำแหน่ง</span>
+  </button>
+</nav>
